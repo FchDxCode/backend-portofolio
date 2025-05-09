@@ -4,7 +4,40 @@ import { encodedRedirect } from "@/src/utils/utils";
 import { createClient } from "@/src/utils/supabase/server";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
+
+export const signUpAction = async (formData: FormData) => {
+  const email = formData.get("email")?.toString();
+  const password = formData.get("password")?.toString();
+  const supabase = await createClient();
+  const origin = (await headers()).get("origin");
+
+  if (!email || !password) {
+    return encodedRedirect(
+      "error",
+      "/sign-up",
+      "Email and password are required",
+    );
+  }
+
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: `${origin}/auth/callback`,
+    },
+  });
+
+  if (error) {
+    console.error(error.code + " " + error.message);
+    return encodedRedirect("error", "/sign-up", error.message);
+  } else {
+    return encodedRedirect(
+      "success",
+      "/sign-up",
+      "Thanks for signing up! Please check your email for a verification link.",
+    );
+  }
+};
 
 export const signInAction = async (formData: FormData) => {
   const email = formData.get("email") as string;
@@ -20,7 +53,7 @@ export const signInAction = async (formData: FormData) => {
     return encodedRedirect("error", "/sign-in", error.message);
   }
 
-  return redirect("/");
+  return redirect("/protected");
 };
 
 export const forgotPasswordAction = async (formData: FormData) => {
@@ -95,36 +128,7 @@ export const resetPasswordAction = async (formData: FormData) => {
 };
 
 export const signOutAction = async () => {
-  try {
-    console.log("Starting signOutAction");
-    const supabase = await createClient();
-    
-    console.log("Calling supabase.auth.signOut");
-    const { error } = await supabase.auth.signOut({ scope: 'global' });
-    
-    if (error) {
-      console.error("Error signing out:", error);
-    } else {
-      console.log("Successfully signed out from Supabase");
-    }
-    
-    // Hapus cookies secara manual jika diperlukan
-    try {
-      const cookieStore = await cookies();
-      
-      // Hapus cookie Supabase
-      cookieStore.delete('sb-access-token');
-      cookieStore.delete('sb-refresh-token');
-      
-      console.log("Manually deleted Supabase cookies");
-    } catch (e) {
-      console.error("Error deleting cookies:", e);
-    }
-    
-    console.log("Redirecting to sign-in page");
-    return redirect("/sign-in");
-  } catch (e) {
-    console.error("Uncaught error in signOutAction:", e);
-    return redirect("/sign-in");
-  }
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  return redirect("/sign-in");
 };

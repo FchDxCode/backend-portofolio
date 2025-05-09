@@ -14,6 +14,7 @@ import {
 } from "./ui/dropdown-menu";
 import { useTheme } from "next-themes";
 import { cn } from "@/src/lib/utils";
+import { signOutAction } from "@/src/services/AuthServices";
 
 interface TopbarProps {
   toggleSidebar: () => void;
@@ -116,7 +117,20 @@ export default function Topbar({ toggleSidebar }: TopbarProps) {
               <DropdownMenuItem>Settings</DropdownMenuItem>
               <DropdownMenuItem>Billing</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-red-500">Log out</DropdownMenuItem>
+              <DropdownMenuItem 
+                className="text-red-500"
+                onClick={async () => {
+                  try {
+                    console.log("Logging out...");
+                    await signOutAction();
+                    console.log("Logged out successfully");
+                  } catch (error) {
+                    console.error("Logout error:", error);
+                  }
+                }}
+              >
+                Log out
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

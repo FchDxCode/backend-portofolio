@@ -10,15 +10,24 @@ export async function GET(request: Request) {
   const origin = requestUrl.origin;
   const redirectTo = requestUrl.searchParams.get("redirect_to")?.toString();
 
+  console.log("AUTH CALLBACK RECEIVED. CODE:", !!code, "REDIRECT_TO:", redirectTo);
+
   if (code) {
     const supabase = await createClient();
-    await supabase.auth.exchangeCodeForSession(code);
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) {
+      console.error("Error exchanging code for session:", error);
+    } else {
+      console.log("Successfully exchanged code for session");
+    }
   }
 
   if (redirectTo) {
+    console.log("Redirecting to:", `${origin}${redirectTo}`);
     return NextResponse.redirect(`${origin}${redirectTo}`);
   }
 
-  // URL to redirect to after sign up process completes
-  return NextResponse.redirect(`${origin}/protected`);
+  console.log("No redirectTo, redirecting to root");
+  // Redirect ke root alih-alih /protected
+  return NextResponse.redirect(`${origin}/`);
 }

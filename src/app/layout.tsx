@@ -1,7 +1,8 @@
+
+
 import { Geist } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import "./globals.css";
-import AdminLayout from "@/src/components/AdminLayout";
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -32,9 +33,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AdminLayout>
-            {children}
-          </AdminLayout>
+          {children}
         </ThemeProvider>
       </body>
     </html>
