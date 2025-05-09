@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { CallmeBanner, CallmeBannerItem } from '@/src/models/BannerModels';
-import { CallmeBannerService } from '@/src/services/banner/CallMeBannerServices';
-import { CallmeBannerItemService } from '@/src/services/banner/CallMeBannerItemServices';
+import { CallmeBannerService } from '@/src/services/banner/CallmeBannerServices';
+import { CallmeBannerItemService } from '@/src/services/banner/CallmeBannerItemServices';
 
 
 export const useCallmeBanner = () => {
