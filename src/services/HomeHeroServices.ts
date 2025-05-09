@@ -1,5 +1,5 @@
-import { createClient } from "../utils/supabase/client";
-import { HomeHero } from "../models/SingletonModels";
+import { createClient } from "@/src/utils/supabase/client";
+import { HomeHero } from "@/src/models/SingletonModels";
 
 const supabase = createClient();
 

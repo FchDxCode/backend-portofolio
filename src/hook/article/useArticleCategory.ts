@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { ArticleCategory } from '../models/ArticleModels';
-import { ArticleCategoryService } from '../services/ArticleCategoryServices';
+import { ArticleCategory } from '@/src/models/ArticleModels';
+import { ArticleCategoryService } from '@/src/services/article/ArticleCategoryServices';
 
 export const useArticleCategories = (initialFilters?: {
   isActive?: boolean;

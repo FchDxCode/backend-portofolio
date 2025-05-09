@@ -1,48 +1,42 @@
-import { createClient } from "../utils/supabase/client";
-import { ArticleTag } from "../models/ArticleModels";
+import { createClient } from "@/src/utils/supabase/client";
+import { ArticleCategory } from "@/src/models/ArticleModels";
 
 const supabase = createClient();
 
-export class ArticleTagService {
-  private static TABLE_NAME = 'article_tags';
+export class ArticleCategoryService {
+  private static TABLE_NAME = 'article_categories';
 
   /**
-   * Get all article tags with optional filters
+   * Get all article categories with optional filters
    */
   static async getAll(params?: {
     isActive?: boolean;
     sort?: 'created_at' | 'title';
     order?: 'asc' | 'desc';
-  }): Promise<ArticleTag[]> {
+  }): Promise<ArticleCategory[]> {
     try {
       let query = supabase
         .from(this.TABLE_NAME)
         .select('*');
 
-      // Apply filters
       if (params?.isActive !== undefined) {
         query = query.eq('is_active', params.isActive);
       }
 
-      // Apply sorting
       if (params?.sort) {
         query = query.order(params.sort, { ascending: params.order === 'asc' });
       }
 
       const { data, error } = await query;
-
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('Error fetching article tags:', error);
+      console.error('Error fetching article categories:', error);
       throw error;
     }
   }
 
-  /**
-   * Get single article tag by id
-   */
-  static async getById(id: number): Promise<ArticleTag | null> {
+  static async getById(id: number): Promise<ArticleCategory | null> {
     try {
       const { data, error } = await supabase
         .from(this.TABLE_NAME)
@@ -53,20 +47,17 @@ export class ArticleTagService {
       if (error) throw error;
       return data;
     } catch (error) {
-      console.error('Error fetching article tag:', error);
+      console.error('Error fetching article category:', error);
       throw error;
     }
   }
 
-  /**
-   * Create new article tag
-   */
-  static async create(tag: Omit<ArticleTag, 'id' | 'created_at' | 'updated_at'>): Promise<ArticleTag> {
+  static async create(category: Omit<ArticleCategory, 'id' | 'created_at' | 'updated_at'>): Promise<ArticleCategory> {
     try {
       const { data, error } = await supabase
         .from(this.TABLE_NAME)
         .insert({
-          ...tag,
+          ...category,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
@@ -76,20 +67,17 @@ export class ArticleTagService {
       if (error) throw error;
       return data;
     } catch (error) {
-      console.error('Error creating article tag:', error);
+      console.error('Error creating article category:', error);
       throw error;
     }
   }
 
-  /**
-   * Update article tag
-   */
-  static async update(id: number, tag: Partial<ArticleTag>): Promise<ArticleTag> {
+  static async update(id: number, category: Partial<ArticleCategory>): Promise<ArticleCategory> {
     try {
       const { data, error } = await supabase
         .from(this.TABLE_NAME)
         .update({
-          ...tag,
+          ...category,
           updated_at: new Date().toISOString()
         })
         .eq('id', id)
@@ -99,14 +87,11 @@ export class ArticleTagService {
       if (error) throw error;
       return data;
     } catch (error) {
-      console.error('Error updating article tag:', error);
+      console.error('Error updating article category:', error);
       throw error;
     }
   }
 
-  /**
-   * Delete article tag
-   */
   static async delete(id: number): Promise<void> {
     try {
       const { error } = await supabase
@@ -116,22 +101,29 @@ export class ArticleTagService {
 
       if (error) throw error;
     } catch (error) {
-      console.error('Error deleting article tag:', error);
+      console.error('Error deleting article category:', error);
       throw error;
     }
   }
 
   /**
-   * Toggle article tag active status
+   * Update category icon
    */
-  static async toggleActive(id: number): Promise<ArticleTag> {
+  static async updateIcon(id: number, file: File): Promise<ArticleCategory> {
     try {
-      const tag = await this.getById(id);
-      if (!tag) throw new Error('Tag not found');
+      const iconPath = `article-categories/${id}/icon-${Date.now()}`;
+      
+      // Upload new icon
+      const { error: uploadError } = await supabase.storage
+        .from('public')
+        .upload(iconPath, file);
 
-      return await this.update(id, { is_active: !tag.is_active });
+      if (uploadError) throw uploadError;
+
+      // Update category with new icon path
+      return await this.update(id, { icon: iconPath });
     } catch (error) {
-      console.error('Error toggling article tag status:', error);
+      console.error('Error updating category icon:', error);
       throw error;
     }
   }

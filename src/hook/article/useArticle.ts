@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Article } from '../models/ArticleModels';
-import { ArticleService } from '../services/ArticleServices';
+import { Article } from '@/src/models/ArticleModels';
+import { ArticleService } from '@/src/services/article/ArticleServices';
 
 export const useArticles = (initialFilters?: {
   isActive?: boolean;

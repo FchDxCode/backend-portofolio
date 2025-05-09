@@ -1,5 +1,5 @@
-import { createClient } from "../utils/supabase/client";
-import { Article } from "../models/ArticleModels";
+import { createClient } from "@/src/utils/supabase/client";
+import { Article } from "@/src/models/ArticleModels";
 
 const supabase = createClient();
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { ArticleTag } from '../models/ArticleModels';
-import { ArticleTagService } from '../services/ArticleTagServices';
+import { ArticleTag } from '@/src/models/ArticleModels';
+import { ArticleTagService } from '@/src/services/article/ArticleTagServices';
 
 export const useArticleTags = (initialFilters?: {
   isActive?: boolean;
