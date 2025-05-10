@@ -71,6 +71,18 @@ export class VisitorService {
    * Track a page view
    */
   static async trackPageView(pageUrl: string): Promise<Visitor | null> {
+    // Uncomment line ini untuk beta-testing API
+    // return await this.trackPageViewViaAPI(pageUrl);
+    
+    // Untuk sementara, kembalikan null dan log pesan untuk admin
+    console.log('Page tracking disabled temporarily while API is being prepared');
+    return null;
+  }
+
+  /**
+   * Track a page view via new API (akan digunakan nanti)
+   */
+  static async trackPageViewViaAPI(pageUrl: string): Promise<Visitor | null> {
     try {
       const sessionId = this.getSessionId();
       const visitorId = uuidv4();
@@ -81,98 +93,26 @@ export class VisitorService {
       // Get IP and geolocation data
       const geoData = await this.getIPAndGeoData();
       
-      const visitor: Visitor = {
-        id: visitorId,
-        session_id: sessionId,
-        user_agent: userAgent,
-        browser,
-        os,
-        device_type: deviceType,
-        is_bot: isBot,
-        ip_address: geoData?.ip || null,
-        country: geoData?.country || null,
-        region: geoData?.region || null,
-        city: geoData?.city || null,
-        latitude: geoData?.latitude || null,
-        longitude: geoData?.longitude || null,
-        page_url: pageUrl,
-        referer: referer || undefined,
-        visited_at: new Date().toISOString(),
-        duration_seconds: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-
-      const { data, error } = await supabase
-        .from(this.VISITORS_TABLE)
-        .insert(visitor)
-        .select()
-        .single();
-
-      if (error) throw error;
+      // Call new API endpoint
+      const response = await fetch('/api/analytics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pageUrl,
+          sessionId,
+          userAgent,
+          referer,
+          ipInfo: geoData
+        })
+      });
       
-      // Start tracking time on page
-      this.startTrackingDuration(visitorId);
+      if (!response.ok) throw new Error('Failed to track via API');
       
-      return data;
+      return await response.json();
     } catch (error) {
-      console.error('Error tracking page view:', error);
+      console.error('Error tracking page view via API:', error);
       return null;
     }
-  }
-
-  /**
-   * Update visitor duration on the page
-   */
-  private static startTrackingDuration(visitorId: string): void {
-    const startTime = Date.now();
-    
-    // Track duration periodically
-    const updateInterval = setInterval(async () => {
-      try {
-        const currentDuration = Math.floor((Date.now() - startTime) / 1000);
-        
-        await supabase
-          .from(this.VISITORS_TABLE)
-          .update({ 
-            duration_seconds: currentDuration,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', visitorId);
-      } catch (error) {
-        console.error('Error updating duration:', error);
-      }
-    }, 15000); // Update every 15 seconds
-    
-    // Update final time on page unload
-    const updateFinalDuration = async () => {
-      try {
-        const finalDuration = Math.floor((Date.now() - startTime) / 1000);
-        
-        await fetch('/api/update-visitor-duration', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            visitorId, 
-            duration: finalDuration 
-          }),
-          // Use keepalive to ensure the request completes even when page is unloading
-          keepalive: true
-        });
-      } catch (error) {
-        console.error('Error updating final duration:', error);
-      } finally {
-        clearInterval(updateInterval);
-      }
-    };
-    
-    // Set up listeners for page unload
-    window.addEventListener('beforeunload', updateFinalDuration);
-    window.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') {
-        updateFinalDuration();
-      }
-    });
   }
 
   /**
@@ -183,25 +123,38 @@ export class VisitorService {
     eventType: string,
     eventData: Record<string, any> = {}
   ): Promise<VisitorEvent | null> {
+    // Uncomment ini untuk beta-testing API
+    // return await this.trackEventViaAPI(visitorId, eventType, eventData);
+    
+    // Untuk sementara, kembalikan null dan log pesan untuk admin
+    console.log('Event tracking disabled temporarily while API is being prepared');
+    return null;
+  }
+
+  /**
+   * Track event via new API (akan digunakan nanti)
+   */
+  static async trackEventViaAPI(
+    visitorId: string,
+    eventType: string,
+    eventData: Record<string, any> = {}
+  ): Promise<VisitorEvent | null> {
     try {
-      const event: VisitorEvent = {
-        id: uuidv4(),
-        visitor_id: visitorId,
-        event_type: eventType,
-        event_data: eventData,
-        event_time: new Date().toISOString()
-      };
-
-      const { data, error } = await supabase
-        .from(this.EVENTS_TABLE)
-        .insert(event)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      const response = await fetch('/api/analytics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          visitorId,
+          eventType,
+          eventData
+        })
+      });
+      
+      if (!response.ok) throw new Error('Failed to track event via API');
+      
+      return await response.json();
     } catch (error) {
-      console.error(`Error tracking event ${eventType}:`, error);
+      console.error(`Error tracking event ${eventType} via API:`, error);
       return null;
     }
   }
