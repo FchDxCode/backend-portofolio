@@ -5,67 +5,69 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
+    --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
+    --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --color-primary: #3b82f6; 
-    --color-indigo-300: rgba(165, 180, 252, 0.8);
-    --color-indigo-400: rgba(129, 140, 248, 0.8);
-    --color-purple-300: rgba(216, 180, 254, 0.8);
-    --color-purple-400: rgba(192, 132, 252, 0.8);
-    --color-blue-300: rgba(147, 197, 253, 0.8);
-    --color-blue-400: rgba(96, 165, 250, 0.8);
-    --color-pink-300: rgba(249, 168, 212, 0.8);
-    --color-pink-400: rgba(244, 114, 182, 0.8);
+
+    /* Chart colors */
+    --chart-1: 221.2 83.2% 53.3%;
+    --chart-2: 142.1 76.2% 36.3%;
+    --chart-3: 47.9 95.8% 53.1%;
+    --chart-4: 346.8 77.2% 49.8%;
+    --chart-5: 261.2 83.3% 58%;
+
+    /* Brand colors */
+    --brand-blue: 221.2 83.2% 53.3%;
+    --brand-indigo: 243.4 75.4% 58.6%;
+    --brand-purple: 261.2 83.3% 58%;
+    --brand-pink: 335.1 87.7% 59.8%;
+    --brand-amber: 37.7 92.1% 50.2%;
+    --brand-green: 142.1 76.2% 36.3%;
   }
 
   .dark {
-    --color-primary: #60a5fa;
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%; 
+    --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+
+    /* Chart colors - adjusted for dark mode */
+    --chart-1: 217.2 91.2% 59.8%;
+    --chart-2: 142.1 70.6% 45.3%;
+    --chart-3: 48.3 96.5% 58.8%;
+    --chart-4: 346.8 77.2% 49.8%;
+    --chart-5: 261.2 73.5% 63.6%;
   }
 }
 
@@ -75,26 +77,37 @@
   }
   body {
     @apply bg-background text-foreground;
-  }
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    /* Tambahkan variabel lainnya dari tema asli */
-  }
-  
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    /* Tambahkan variabel lainnya dari tema dark asli */
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
+/* Custom scrollbar */
+@layer utilities {
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-muted rounded-full;
+  }
+
+  .scrollbar-thin:hover::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/40;
+  }
+}
+
+/* Animation keyframes */
 @keyframes float {
   0% {
     transform: translateY(0) rotate(0);
   }
   50% {
-    transform: translateY(-20px) rotate(5deg);
+    transform: translateY(-10px) rotate(3deg);
   }
   100% {
     transform: translateY(0) rotate(0);
@@ -102,5 +115,90 @@
 }
 
 .animate-float {
-  animation: float 15s ease-in-out infinite alternate;
+  animation: float 8s ease-in-out infinite;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.pulse-ring::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 50%;
+  animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+  @apply bg-primary;
+}
+
+/* Additional utility classes */
+@layer components {
+  .glass-effect {
+    @apply bg-white/10 backdrop-blur-lg backdrop-saturate-150 border border-white/20;
+  }
+  
+  .dark .glass-effect {
+    @apply bg-black/20 border-white/10;
+  }
+  
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-md hover:-translate-y-1;
+  }
+  
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary via-brand-indigo to-brand-purple;
+  }
+
+  /* Animations */
+  .animate-in {
+    animation: animateIn 0.3s ease forwards;
+  }
+
+  .fade-in-20 {
+    animation: fadeIn 0.2s ease forwards;
+  }
+
+  .slide-in-from-top-5 {
+    animation: slideInFromTop 0.2s ease forwards;
+  }
+}
+
+@keyframes animateIn {
+  from { 
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInFromTop {
+  from { 
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

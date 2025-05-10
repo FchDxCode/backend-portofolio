@@ -164,7 +164,7 @@ export default function Login() {
                   id="email"
                   name="email"
                   className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white/70 dark:bg-slate-800/70 px-4 py-3.5 pl-10 text-slate-900 dark:text-white placeholder-slate-400 shadow-sm transition-all duration-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:ring-opacity-50 focus:bg-white dark:focus:bg-slate-800"
-                  placeholder="nama@perusahaan.com"
+                  placeholder="nama@codecraft.tech"
                   required
                 />
                 <div className="absolute inset-y-0 right-3 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -231,19 +231,6 @@ export default function Login() {
             <div className="pt-4">
               <SubmitButton />
             </div>
-            
-            {/* Register option */}
-            <div className="text-center mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
-              <p className="text-slate-600 dark:text-slate-400">
-                Belum punya akun?{" "}
-                <Link 
-                  href="/register" 
-                  className="font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors hover:underline"
-                >
-                  Daftar sekarang
-                </Link>
-              </p>
-            </div>
           </form>
         </div>
         
@@ -253,7 +240,7 @@ export default function Login() {
       
       {/* Brand/Copyright */}
       <div className="absolute bottom-4 text-center text-white/70 text-sm w-full">
-        <p>© 2025 Perusahaan Anda • Semua Hak Dilindungi</p>
+        <p>© 2025 CodeCraft • Semua Hak Dilindungi</p>
       </div>
     </div>
   );
