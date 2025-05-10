@@ -2,6 +2,7 @@
 
 import { useVisitorAnalytics } from '@/src/hook/useVisitor';
 import { BarChart3, TrendingUp, TrendingDown } from 'lucide-react';
+import AnalyticsLoading from '@/src/components/analytics/AnalyticsLoading';
 
 interface ComparisonMetricsProps {
     analytics: ReturnType<typeof useVisitorAnalytics>;
@@ -11,50 +12,103 @@ interface ComparisonMetricsProps {
 export default function ComparisonMetrics({ analytics, className = "" }: ComparisonMetricsProps) {
     const comparison = analytics.comparison;
     
-    // If we don't have real comparison data, use placeholder for the UI
-    const metrics = comparison ? [
+    if (analytics.loading) {
+        return <div className={`rounded-xl border bg-card p-6 ${className}`}><AnalyticsLoading /></div>;
+    }
+    
+    // If no comparison data available, show empty state
+    if (!comparison) {
+        return (
+            <div className={`rounded-xl border bg-card p-6 flex flex-col items-center justify-center min-h-[300px] ${className}`}>
+                <BarChart3 className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No comparison data</h3>
+                <p className="text-sm text-muted-foreground text-center max-w-md">
+                    Enable "Compare with previous period" in the filter panel to see comparison metrics.
+                </p>
+            </div>
+        );
+    }
+    
+    // Dengan alternatif yang menggunakan data yang sudah ada
+    const calculateBounceRateMetrics = () => {
+        if (!analytics.comparison) {
+            return { current: 0, previous: 0, change: 0 };
+        }
+        
+        // Estimasi bounce rate sederhana berdasarkan rasio total kunjungan
+        // dengan pengunjung unik. Semakin dekat rasionya dengan 1, semakin tinggi bounce rate.
+        const currentRatio = analytics.comparison.current.uniqueVisitors / Math.max(1, analytics.comparison.current.totalVisits);
+        const previousRatio = analytics.comparison.previous.uniqueVisitors / Math.max(1, analytics.comparison.previous.totalVisits);
+        
+        // Konversi ke persentase bounce rate (estimasi kasar)
+        const currentBounce = Math.min(100, Math.max(0, (1 - (1 / Math.max(1, currentRatio))) * 100));
+        const previousBounce = Math.min(100, Math.max(0, (1 - (1 / Math.max(1, previousRatio))) * 100));
+        
+        // Hitung perubahan (improvement = bounce rate turun)
+        const change = previousBounce > 0 ? ((currentBounce - previousBounce) / previousBounce) * 100 : 0;
+        
+        return { 
+            current: currentBounce, 
+            previous: previousBounce, 
+            change: change
+        };
+    };
+
+    const calculatePagesPerVisitMetrics = () => {
+        if (!analytics.comparison) {
+            return { current: 0, previous: 0, change: 0 };
+        }
+        
+        // Estimasi pages per visit berdasarkan rasio total kunjungan
+        // dengan pengunjung unik. Nilai lebih tinggi berarti lebih banyak halaman dilihat per pengunjung.
+        const currentPagesPerVisit = analytics.comparison.current.totalVisits / 
+                                     Math.max(1, analytics.comparison.current.uniqueVisitors);
+        const previousPagesPerVisit = analytics.comparison.previous.totalVisits / 
+                                      Math.max(1, analytics.comparison.previous.uniqueVisitors);
+        
+        // Hitung perubahan (improvement = lebih banyak halaman dilihat)
+        const change = previousPagesPerVisit > 0 ? 
+            ((currentPagesPerVisit - previousPagesPerVisit) / previousPagesPerVisit) * 100 : 0;
+        
+        return { 
+            current: currentPagesPerVisit, 
+            previous: previousPagesPerVisit, 
+            change: change
+        };
+    };
+
+    const bounceRateMetrics = calculateBounceRateMetrics();
+    const pagesPerVisitMetrics = calculatePagesPerVisitMetrics();
+    
+    // Calculate new visitors as a percentage of unique visitors
+    const newVisitorPercent = 0.65; // This should come from actual data
+    const currentNewVisitors = Math.round(comparison.current.uniqueVisitors * newVisitorPercent);
+    const previousNewVisitors = Math.round(comparison.previous.uniqueVisitors * newVisitorPercent);
+    const newVisitorsChange = comparison.previous.uniqueVisitors > 0 
+        ? ((currentNewVisitors - previousNewVisitors) / previousNewVisitors) * 100 
+        : 0;
+    
+    const metrics = [
         { 
             name: "Bounce Rate", 
-            current: "42.3%", 
-            previous: "46.8%", 
-            change: 4.5, 
-            improved: true 
+            current: `${bounceRateMetrics.current.toFixed(1)}%`, 
+            previous: `${bounceRateMetrics.previous.toFixed(1)}%`, 
+            change: bounceRateMetrics.change, 
+            improved: bounceRateMetrics.change < 0 // Lower bounce rate is better
         },
         { 
             name: "Pages / Visit", 
-            current: "3.7", 
-            previous: "3.2", 
-            change: 15.6, 
-            improved: true 
+            current: pagesPerVisitMetrics.current.toFixed(1), 
+            previous: pagesPerVisitMetrics.previous.toFixed(1), 
+            change: pagesPerVisitMetrics.change, 
+            improved: pagesPerVisitMetrics.change > 0 
         },
         { 
             name: "New Visitors", 
-            current: `${Math.round(comparison.current.uniqueVisitors * 0.68)}`, 
-            previous: `${Math.round(comparison.previous.uniqueVisitors * 0.65)}`, 
-            change: 4.6, 
-            improved: true 
-        },
-    ] : [
-        { 
-            name: "Bounce Rate", 
-            current: "42.3%", 
-            previous: "46.8%", 
-            change: 4.5, 
-            improved: true 
-        },
-        { 
-            name: "Pages / Visit", 
-            current: "3.7", 
-            previous: "3.2", 
-            change: 15.6, 
-            improved: true 
-        },
-        { 
-            name: "New Visitors", 
-            current: "16,842", 
-            previous: "16,105", 
-            change: 4.6, 
-            improved: true 
+            current: currentNewVisitors.toLocaleString(), 
+            previous: previousNewVisitors.toLocaleString(), 
+            change: newVisitorsChange, 
+            improved: newVisitorsChange > 0 
         },
     ];
 

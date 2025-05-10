@@ -15,6 +15,7 @@ import {
     Filler 
 } from 'chart.js';
 import { useState } from 'react';
+import AnalyticsLoading from '@/src/components/analytics/AnalyticsLoading';
 
 // Register Chart.js components
 ChartJS.register(
@@ -38,36 +39,43 @@ export default function VisitorTrends({ analytics, className = "" }: VisitorTren
     const isDark = theme === 'dark';
     const [chartType, setChartType] = useState<'visitors' | 'pageViews'>('visitors');
     
-    // Prepare chart data - using visitorStats from the hook
-    // This is placeholder data, in a real implementation we would use
-    // analytics.visitorStats and format it appropriately
-    const dates = Array.from({ length: 30 }, (_, i) => {
-        const date = new Date();
-        date.setDate(date.getDate() - 30 + i + 1);
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    });
+    if (analytics.loading) {
+        return <div className={`rounded-xl border bg-card p-6 ${className}`}><AnalyticsLoading /></div>;
+    }
     
-    // Generate some realistic-looking data
-    const generateData = (mean: number, variance: number, upwardTrend: number = 0) => {
-        return Array.from({ length: 30 }, (_, i) => {
-            // Weekend dips
-            const weekendFactor = (i + 1) % 7 === 0 || (i + 2) % 7 === 0 ? 0.7 : 1;
-            
-            // Random variation
-            const random = Math.random() * variance * 2 - variance;
-            
-            // Upward trend
-            const trend = (i / 30) * upwardTrend;
-            
-            return Math.max(0, Math.round((mean + random + trend) * weekendFactor));
+    // Process analytics data for chart display
+    const processChartData = () => {
+        // If no data, return empty arrays
+        if (!analytics.visitorStats || analytics.visitorStats.length === 0) {
+            return {
+                labels: [],
+                visitorData: [],
+                pageViewData: []
+            };
+        }
+        
+        // Sort data by date
+        const sortedStats = [...analytics.visitorStats].sort(
+            (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+        );
+        
+        // Format dates for labels
+        const labels = sortedStats.map(stat => {
+            const date = new Date(stat.date);
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         });
+        
+        // Extract visitor and page view data
+        const visitorData = sortedStats.map(stat => stat.uniqueVisitors || 0);
+        const pageViewData = sortedStats.map(stat => stat.totalVisits || 0);
+        
+        return { labels, visitorData, pageViewData };
     };
     
-    const visitorData = generateData(850, 150, 300);
-    const pageViewData = generateData(2400, 400, 700);
+    const { labels, visitorData, pageViewData } = processChartData();
     
     const chartData = {
-        labels: dates,
+        labels: labels,
         datasets: [
             {
                 label: chartType === 'visitors' ? 'Unique Visitors' : 'Page Views',
@@ -157,6 +165,9 @@ export default function VisitorTrends({ analytics, className = "" }: VisitorTren
     // Calculate summary statistics
     const calculateSummary = () => {
         const data = chartType === 'visitors' ? visitorData : pageViewData;
+        if (data.length === 0) {
+            return { total: 0, avg: 0, max: 0, min: 0 };
+        }
         return {
             total: data.reduce((a, b) => a + b, 0),
             avg: Math.round(data.reduce((a, b) => a + b, 0) / data.length),

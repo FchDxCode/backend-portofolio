@@ -3,6 +3,7 @@
 import { Users, Clock, MousePointerClick, ArrowRight, TrendingUp, TrendingDown } from 'lucide-react';
 import { useVisitorAnalytics } from '@/src/hook/useVisitor';
 import { useTheme } from 'next-themes';
+import AnalyticsLoading from '@/src/components/analytics/AnalyticsLoading';
 
 interface VisitorOverviewProps {
     analytics: ReturnType<typeof useVisitorAnalytics>;
@@ -13,31 +14,48 @@ export default function VisitorOverview({ analytics, className = "" }: VisitorOv
     const { theme } = useTheme();
     const isDark = theme === 'dark';
     
-    // Placeholder data - would use actual data from analytics in a real implementation
+    if (analytics.loading) {
+        return <div className={`rounded-xl border bg-card p-6 ${className}`}><AnalyticsLoading /></div>;
+    }
+    
+    // Calculate average duration from visitor stats
+    const calculateAvgDuration = () => {
+        if (!analytics.visitorStats || analytics.visitorStats.length === 0) return "0s";
+        
+        const avgDurationSecs = Math.floor(
+            analytics.visitorStats.reduce((sum, stat) => sum + (stat.avgDuration || 0), 0) / 
+            analytics.visitorStats.length
+        );
+        
+        const mins = Math.floor(avgDurationSecs / 60);
+        const secs = avgDurationSecs % 60;
+        return `${mins}m ${secs}s`;
+    };
+    
     const overviewMetrics = [
         {
             title: "Total Visitors",
-            value: analytics.uniqueVisitors || 24850,
+            value: analytics.uniqueVisitors || 0,
             icon: <Users className="h-5 w-5" />,
-            change: analytics.comparison?.changes.uniqueVisitorsPercent || 10.8,
+            change: analytics.comparison?.changes.uniqueVisitorsPercent || 0,
             color: "from-blue-600 to-indigo-600",
             gradient: "from-blue-100/20 to-indigo-100/20",
             darkGradient: "from-blue-900/20 to-indigo-900/20"
         },
         {
             title: "Total Visits",
-            value: analytics.comparison?.current.totalVisits || 36420,
+            value: analytics.comparison?.current.totalVisits || 0,
             icon: <MousePointerClick className="h-5 w-5" />,
-            change: analytics.comparison?.changes.visitsPercent || 5.3,
+            change: analytics.comparison?.changes.visitsPercent || 0,
             color: "from-purple-600 to-pink-600",
             gradient: "from-purple-100/20 to-pink-100/20",
             darkGradient: "from-purple-900/20 to-pink-900/20"
         },
         {
             title: "Avg. Visit Duration",
-            value: "2m 45s",
+            value: calculateAvgDuration(),
             icon: <Clock className="h-5 w-5" />,
-            change: 7.2,
+            change: 0, // Needs to be calculated if you have data for this
             color: "from-amber-500 to-orange-600",
             gradient: "from-amber-100/20 to-orange-100/20",
             darkGradient: "from-amber-900/20 to-orange-900/20"

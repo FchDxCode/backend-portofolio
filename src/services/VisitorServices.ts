@@ -295,24 +295,38 @@ export class VisitorService {
   }
 
   /**
-   * Get unique visitors count
+   * Get unique visitors count - menggunakan query langsung
    */
   static async getUniqueVisitorsCount(params?: {
     startDate?: string;
     endDate?: string;
   }): Promise<number> {
     try {
-      // Use a database function for unique session_id count
-      const { data, error } = await supabase.rpc(
-        'get_unique_visitors_count',
-        {
-          start_date: params?.startDate || null,
-          end_date: params?.endDate || null
-        }
-      );
+      let query = supabase
+        .from(this.VISITORS_TABLE)
+        .select('session_id');
+      
+      if (params?.startDate) {
+        query = query.gte('visited_at', params.startDate);
+      }
+      
+      if (params?.endDate) {
+        query = query.lte('visited_at', params.endDate);
+      }
+      
+      const { data, error } = await query;
       
       if (error) throw error;
-      return data || 0;
+      
+      // Hitung jumlah session_id unik
+      const uniqueSessions = new Set();
+      data.forEach(visitor => {
+        if (visitor.session_id) {
+          uniqueSessions.add(visitor.session_id);
+        }
+      });
+      
+      return uniqueSessions.size;
     } catch (error) {
       console.error('Error getting unique visitors count:', error);
       return 0;
@@ -320,7 +334,7 @@ export class VisitorService {
   }
 
   /**
-   * Get top pages
+   * Get top pages - tanpa fallback data statis
    */
   static async getTopPages(params?: {
     startDate?: string;
@@ -328,26 +342,55 @@ export class VisitorService {
     limit?: number;
   }): Promise<any[]> {
     try {
-      // Use a database function for page views aggregation
-      const { data, error } = await supabase.rpc(
-        'get_top_pages',
-        {
-          start_date: params?.startDate || null,
-          end_date: params?.endDate || null,
-          page_limit: params?.limit || 10
-        }
-      );
+      let query = supabase
+        .from(this.VISITORS_TABLE)
+        .select('page_url, duration_seconds');
+      
+      if (params?.startDate) {
+        query = query.gte('visited_at', params.startDate);
+      }
+      
+      if (params?.endDate) {
+        query = query.lte('visited_at', params.endDate);
+      }
+      
+      const { data, error } = await query;
       
       if (error) throw error;
-      return data || [];
+      
+      // Proses data untuk menghitung statistik halaman top
+      const pageStats: Record<string, { count: number, totalDuration: number }> = {};
+      
+      // Hitung jumlah visit dan total durasi per halaman
+      data.forEach(visit => {
+        const page = visit.page_url;
+        if (!pageStats[page]) {
+          pageStats[page] = { count: 0, totalDuration: 0 };
+        }
+        pageStats[page].count++;
+        pageStats[page].totalDuration += visit.duration_seconds || 0;
+      });
+      
+      // Konversi ke array dan hitung rata-rata durasi
+      const result = Object.entries(pageStats).map(([page_url, stats]) => ({
+        page_url,
+        count: stats.count,
+        avgDuration: Math.round(stats.totalDuration / stats.count) || 0
+      }));
+      
+      // Sortir berdasarkan jumlah kunjungan dan batasi jumlah hasil
+      return result
+        .sort((a, b) => b.count - a.count)
+        .slice(0, params?.limit || 10);
     } catch (error) {
       console.error('Error getting top pages:', error);
+      // Return array kosong saat error, tanpa fallback data statis
       return [];
     }
   }
 
   /**
-   * Get traffic sources
+   * Get traffic sources - tanpa fallback data statis
    */
   static async getTrafficSources(params?: {
     startDate?: string;
@@ -355,20 +398,63 @@ export class VisitorService {
     limit?: number;
   }): Promise<any[]> {
     try {
-      // Use a database function for referrer aggregation
-      const { data, error } = await supabase.rpc(
-        'get_traffic_sources',
-        {
-          start_date: params?.startDate || null,
-          end_date: params?.endDate || null,
-          source_limit: params?.limit || 10
-        }
-      );
+      let query = supabase
+        .from(this.VISITORS_TABLE)
+        .select('referer');
+      
+      if (params?.startDate) {
+        query = query.gte('visited_at', params.startDate);
+      }
+      
+      if (params?.endDate) {
+        query = query.lte('visited_at', params.endDate);
+      }
+      
+      const { data, error } = await query;
       
       if (error) throw error;
-      return data || [];
+      
+      // Proses referer untuk kategorisasi
+      const refererCounts: Record<string, number> = {};
+      let totalVisits = 0;
+      
+      data.forEach(visit => {
+        totalVisits++;
+        
+        // Kategorisasi referer
+        let category = 'direct';
+        const referer = visit.referer;
+        
+        if (referer) {
+          if (referer.includes('google') || referer.includes('bing') || referer.includes('yahoo')) {
+            category = 'organic';
+          } else if (referer.includes('facebook') || referer.includes('twitter') || 
+                    referer.includes('instagram') || referer.includes('linkedin')) {
+            category = 'social';
+          } else if (referer.includes('mail') || referer.includes('outlook') || referer.includes('gmail')) {
+            category = 'email';
+          } else {
+            category = 'referral';
+          }
+        }
+        
+        refererCounts[category] = (refererCounts[category] || 0) + 1;
+      });
+      
+      // Konversi ke array dan hitung persentase
+      const result = Object.entries(refererCounts).map(([referer, count]) => ({
+        referer,
+        count,
+        percent: Math.round((count / totalVisits) * 100)
+      }));
+      
+      // Sortir berdasarkan jumlah dan batasi jumlah hasil
+      return result
+        .sort((a, b) => b.count - a.count)
+        .slice(0, params?.limit || 10);
     } catch (error) {
       console.error('Error getting traffic sources:', error);
+      // Return array kosong saat error, tanpa fallback data statis
       return [];
     }
   }
