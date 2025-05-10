@@ -193,7 +193,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
               <span className="absolute inset-0 flex items-center justify-center text-white font-bold text-lg">A</span>
               <div className="absolute inset-0 bg-white/10 mix-blend-overlay"></div>
             </div>
-            <span className="font-semibold text-lg tracking-tight">AdminDash</span>
+            <span className="font-semibold text-lg tracking-tight">Fachru Admin</span>
           </div>
           <button 
             className="ml-auto lg:hidden inline-flex items-center justify-center w-8 h-8 rounded-md hover:bg-accent transition-colors"
