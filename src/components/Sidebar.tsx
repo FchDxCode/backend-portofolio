@@ -71,12 +71,12 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         { 
           title: "Dashboard", 
           icon: <Home className="w-4 h-4" />, 
-          href: "/dashboard"
+          href: "/"
         },
         { 
           title: "Analytics", 
           icon: <TrendingUp className="w-4 h-4" />, 
-          href: "/dashboard/analytics",
+          href: "/analytics",
           badge: "New",
           badgeColor: "bg-blue-500"
         }
