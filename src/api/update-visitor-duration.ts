@@ -11,18 +11,19 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const supabase = createClient();
-    
+    // Await the creation of the Supabase client
+    const supabase = await createClient();
+
     const { error } = await supabase
       .from('visitors')
-      .update({ 
+      .update({
         duration_seconds: duration,
         updated_at: new Date().toISOString()
       })
       .eq('id', visitorId);
 
     if (error) throw error;
-    
+
     return res.status(200).json({ success: true });
   } catch (error) {
     console.error('Error updating visitor duration:', error);

@@ -13,7 +13,7 @@ export class TestimonialService {
     categoryId?: number;
     status?: 'draft' | 'published';
     rating?: number;
-    sort?: 'rating' | 'created_at' | 'name';
+    sort?: 'rating' | 'name' | 'created_at' | 'star' | 'year';
     order?: 'asc' | 'desc';
     withCategory?: boolean;
     year?: number;
@@ -55,7 +55,8 @@ export class TestimonialService {
         }
 
         if (params?.sort) {
-          query = query.order(params.sort, { ascending: params.order === 'asc' });
+          const sortField = params.sort === 'rating' ? 'star' : params.sort;
+          query = query.order(sortField, { ascending: params.order === 'asc' });
         } else {
           query = query.order('created_at', { ascending: false });
         }
@@ -128,7 +129,8 @@ export class TestimonialService {
         }
 
         if (params?.sort) {
-          query = query.order(params.sort, { ascending: params.order === 'asc' });
+          const sortField = params.sort === 'rating' ? 'star' : params.sort;
+          query = query.order(sortField, { ascending: params.order === 'asc' });
         } else {
           query = query.order('created_at', { ascending: false });
         }
