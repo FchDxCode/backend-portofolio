@@ -1,15 +1,28 @@
-import { createClient } from "@/src/utils/supabase/client";
-import { Certificate } from "@/src/models/CertificateModels";
+'use server';
+
+import { createClient } from '@/src/utils/supabase/client';
+import { Certificate } from '@/src/models/CertificateModels';
+import {
+  saveFile,
+  deleteFile,
+} from '@/src/utils/server/FileStorage'; 
 
 const supabase = createClient();
 
 export class CertificateService {
-  private static TABLE_NAME = 'certificates';
-  private static STORAGE_FOLDER = 'certificates';
+  private static TABLE = 'certificates';
+  private static FOLDER = 'certificates';
 
-  /**
-   * Get all certificates with filters and sorting
-   */
+  static async getById(id: number): Promise<Certificate | null> {
+    const { data, error } = await supabase
+      .from(this.TABLE)
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
   static async getAll(params?: {
     skillId?: number;
     isValid?: boolean;
@@ -22,268 +35,155 @@ export class CertificateService {
     limit?: number;
   }): Promise<{ data: Certificate[]; count: number }> {
     try {
-      let query = supabase
-        .from(this.TABLE_NAME)
-        .select('*', { count: 'exact' });
+      let q = supabase.from(this.TABLE).select('*', { count: 'exact' });
 
-      // Apply filters
-      if (params?.skillId) {
-        query = query.eq('skill_id', params.skillId);
-      }
+      if (params?.skillId) q = q.eq('skill_id', params.skillId);
 
       if (params?.isValid !== undefined) {
-        const currentDate = new Date().toISOString();
-        if (params.isValid) {
-          query = query.gt('valid_until', currentDate);
-        } else {
-          query = query.lte('valid_until', currentDate);
-        }
+        const now = new Date().toISOString();
+        q = params.isValid ? q.gt('valid_until', now) : q.lte('valid_until', now);
       }
 
-      if (params?.issuedDateStart) {
-        query = query.gte('issued_date', params.issuedDateStart);
-      }
-
-      if (params?.issuedDateEnd) {
-        query = query.lte('issued_date', params.issuedDateEnd);
-      }
+      if (params?.issuedDateStart) q = q.gte('issued_date', params.issuedDateStart);
+      if (params?.issuedDateEnd) q = q.lte('issued_date', params.issuedDateEnd);
 
       if (params?.search) {
-        query = query.or(`title->en.ilike.%${params.search}%,title->id.ilike.%${params.search}%,issued_by.ilike.%${params.search}%`);
+        q = q.or(
+          `title->en.ilike.%${params.search}%,title->id.ilike.%${params.search}%,issued_by.ilike.%${params.search}%`
+        );
       }
 
-      // Apply sorting
-      if (params?.sort) {
-        query = query.order(params.sort, { ascending: params.order === 'asc' });
-      } else {
-        query = query.order('created_at', { ascending: false });
-      }
+      q = q.order(params?.sort ?? 'created_at', {
+        ascending: params?.order === 'asc',
+      });
 
-      // Apply pagination
       if (params?.page && params?.limit) {
         const from = (params.page - 1) * params.limit;
-        const to = from + params.limit - 1;
-        query = query.range(from, to);
+        q = q.range(from, from + params.limit - 1);
       }
 
-      const { data, error, count } = await query;
-
+      const { data, error, count } = await q;
       if (error) throw error;
-      return { data: data || [], count: count || 0 };
-    } catch (error) {
-      console.error('Error fetching certificates:', error);
-      throw error;
+      return { data: data ?? [], count: count ?? 0 };
+    } catch (err) {
+      console.error('Error fetching certificates:', err);
+      throw err;
     }
   }
 
-  /**
-   * Get certificate by ID
-   */
-  static async getById(id: number): Promise<Certificate | null> {
-    try {
-      const { data, error } = await supabase
-        .from(this.TABLE_NAME)
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Error fetching certificate:', error);
-      throw error;
+  static async create(
+    cert: Omit<Certificate, 'id' | 'created_at' | 'updated_at'>
+  ): Promise<Certificate> {
+    if (
+      cert.issued_date &&
+      cert.valid_until &&
+      new Date(cert.issued_date) >= new Date(cert.valid_until)
+    ) {
+      throw new Error('Issue date must be before valid‑until date');
     }
+
+    const { data, error } = await supabase
+      .from(this.TABLE)
+      .insert({
+        ...cert,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
   }
 
-  /**
-   * Create new certificate
-   */
-  static async create(certificate: Omit<Certificate, 'id' | 'created_at' | 'updated_at'>): Promise<Certificate> {
-    try {
-      // Validate dates
-      if (certificate.issued_date && certificate.valid_until) {
-        if (new Date(certificate.issued_date) >= new Date(certificate.valid_until)) {
-          throw new Error('Issue date must be before valid until date');
-        }
-      }
-
-      const { data, error } = await supabase
-        .from(this.TABLE_NAME)
-        .insert({
-          ...certificate,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Error creating certificate:', error);
-      throw error;
+  static async update(id: number, cert: Partial<Certificate>): Promise<Certificate> {
+    if (
+      cert.issued_date &&
+      cert.valid_until &&
+      new Date(cert.issued_date) >= new Date(cert.valid_until)
+    ) {
+      throw new Error('Issue date must be before valid‑until date');
     }
+
+    const { data, error } = await supabase
+      .from(this.TABLE)
+      .update({ ...cert, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
   }
 
-  /**
-   * Update certificate
-   */
-  static async update(id: number, certificate: Partial<Certificate>): Promise<Certificate> {
-    try {
-      // Validate dates if both are provided
-      if (certificate.issued_date && certificate.valid_until) {
-        if (new Date(certificate.issued_date) >= new Date(certificate.valid_until)) {
-          throw new Error('Issue date must be before valid until date');
-        }
-      }
-
-      const { data, error } = await supabase
-        .from(this.TABLE_NAME)
-        .update({
-          ...certificate,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Error updating certificate:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Delete certificate and its files
-   */
-  static async delete(id: number): Promise<void> {
-    try {
-      // Get certificate to check for files
-      const certificate = await this.getById(id);
-      if (!certificate) throw new Error('Certificate not found');
-
-      // Delete files if they exist
-      if (certificate.pdf || certificate.image) {
-        await this.deleteFiles(id, 'both');
-      }
-
-      // Delete certificate record
-      const { error } = await supabase
-        .from(this.TABLE_NAME)
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error deleting certificate:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Upload certificate files (PDF and/or image)
-   */
   static async uploadFiles(
     id: number,
     files: { pdf?: File; image?: File }
   ): Promise<Certificate> {
     try {
+      const current = await this.getById(id);
+      if (!current) throw new Error('Certificate not found');
+
+      const folder = `${this.FOLDER}/${id}`;
       const updates: Partial<Certificate> = {};
 
-      // Handle PDF upload
       if (files.pdf) {
-        const pdfPath = `${this.STORAGE_FOLDER}/${id}/pdf-${Date.now()}`;
-        const { error: pdfError } = await supabase.storage
-          .from('public')
-          .upload(pdfPath, files.pdf);
-
-        if (pdfError) throw pdfError;
-        updates.pdf = pdfPath;
+        updates.pdf = await saveFile(files.pdf, {
+          folder,
+          deletePrev: current.pdf ?? null,
+        });
       }
 
-      // Handle image upload
       if (files.image) {
-        const imagePath = `${this.STORAGE_FOLDER}/${id}/image-${Date.now()}`;
-        const { error: imageError } = await supabase.storage
-          .from('public')
-          .upload(imagePath, files.image);
-
-        if (imageError) throw imageError;
-        updates.image = imagePath;
+        updates.image = await saveFile(files.image, {
+          folder,
+          deletePrev: current.image ?? null,
+        });
       }
 
-      // Update certificate with new file paths
-      return await this.update(id, updates);
-    } catch (error) {
-      console.error('Error uploading certificate files:', error);
-      throw error;
+      return this.update(id, updates);
+    } catch (err) {
+      console.error('Error uploading certificate files:', err);
+      throw err;
     }
   }
 
-  /**
-   * Delete certificate files
-   */
-  static async deleteFiles(id: number, type: 'pdf' | 'image' | 'both'): Promise<void> {
-    try {
-      const certificate = await this.getById(id);
-      if (!certificate) throw new Error('Certificate not found');
+  static async deleteFiles(id: number, type: 'pdf' | 'image' | 'both') {
+    const cert = await this.getById(id);
+    if (!cert) throw new Error('Certificate not found');
 
-      const filesToDelete: string[] = [];
+    const toDel: string[] = [];
+    if ((type === 'pdf' || type === 'both') && cert.pdf) toDel.push(cert.pdf);
+    if ((type === 'image' || type === 'both') && cert.image) toDel.push(cert.image);
 
-      if ((type === 'pdf' || type === 'both') && certificate.pdf) {
-        filesToDelete.push(certificate.pdf);
-      }
+    await Promise.all(toDel.map(deleteFile));
 
-      if ((type === 'image' || type === 'both') && certificate.image) {
-        filesToDelete.push(certificate.image);
-      }
+    const updates: Partial<Certificate> = {};
+    if (type === 'pdf' || type === 'both') updates.pdf = undefined;
+    if (type === 'image' || type === 'both') updates.image = undefined;
 
-      if (filesToDelete.length > 0) {
-        const { error } = await supabase.storage
-          .from('public')
-          .remove(filesToDelete);
-
-        if (error) throw error;
-
-        // Update certificate to remove file references
-        const updates: Partial<Certificate> = {};
-        if (type === 'pdf' || type === 'both') updates.pdf = undefined;
-        if (type === 'image' || type === 'both') updates.image = undefined;
-
-        await this.update(id, updates);
-      }
-    } catch (error) {
-      console.error('Error deleting certificate files:', error);
-      throw error;
-    }
+    await this.update(id, updates);
   }
 
-  /**
-   * Check if certificate is valid
-   */
-  static isValid(certificate: Certificate): boolean {
-    if (!certificate.valid_until) return true;
-    return new Date(certificate.valid_until) > new Date();
+  static async delete(id: number) {
+    const cert = await this.getById(id);
+    if (!cert) throw new Error('Certificate not found');
+
+    await this.deleteFiles(id, 'both');
+
+    const { error } = await supabase.from(this.TABLE).delete().eq('id', id);
+    if (error) throw error;
   }
 
-  /**
-   * Get certificates by skill ID
-   */
+  static isValid(cert: Certificate) {
+    return !cert.valid_until || new Date(cert.valid_until) > new Date();
+  }
+
   static async getBySkill(skillId: number): Promise<Certificate[]> {
-    try {
-      const { data, error } = await supabase
-        .from(this.TABLE_NAME)
-        .select('*')
-        .eq('skill_id', skillId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Error fetching certificates by skill:', error);
-      throw error;
-    }
+    const { data, error } = await supabase
+      .from(this.TABLE)
+      .select('*')
+      .eq('skill_id', skillId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data ?? [];
   }
 }

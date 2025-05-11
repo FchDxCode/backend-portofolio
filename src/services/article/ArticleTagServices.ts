@@ -6,9 +6,6 @@ const supabase = createClient();
 export class ArticleTagService {
   private static TABLE_NAME = 'article_tags';
 
-  /**
-   * Get all article tags with optional filters
-   */
   static async getAll(params?: {
     isActive?: boolean;
     sort?: 'created_at' | 'title';
@@ -19,12 +16,10 @@ export class ArticleTagService {
         .from(this.TABLE_NAME)
         .select('*');
 
-      // Apply filters
       if (params?.isActive !== undefined) {
         query = query.eq('is_active', params.isActive);
       }
 
-      // Apply sorting
       if (params?.sort) {
         query = query.order(params.sort, { ascending: params.order === 'asc' });
       }
@@ -39,9 +34,6 @@ export class ArticleTagService {
     }
   }
 
-  /**
-   * Get single article tag by id
-   */
   static async getById(id: number): Promise<ArticleTag | null> {
     try {
       const { data, error } = await supabase
@@ -58,9 +50,6 @@ export class ArticleTagService {
     }
   }
 
-  /**
-   * Create new article tag
-   */
   static async create(tag: Omit<ArticleTag, 'id' | 'created_at' | 'updated_at'>): Promise<ArticleTag> {
     try {
       const { data, error } = await supabase
@@ -81,9 +70,6 @@ export class ArticleTagService {
     }
   }
 
-  /**
-   * Update article tag
-   */
   static async update(id: number, tag: Partial<ArticleTag>): Promise<ArticleTag> {
     try {
       const { data, error } = await supabase
@@ -104,9 +90,6 @@ export class ArticleTagService {
     }
   }
 
-  /**
-   * Delete article tag
-   */
   static async delete(id: number): Promise<void> {
     try {
       const { error } = await supabase
@@ -121,9 +104,6 @@ export class ArticleTagService {
     }
   }
 
-  /**
-   * Toggle article tag active status
-   */
   static async toggleActive(id: number): Promise<ArticleTag> {
     try {
       const tag = await this.getById(id);

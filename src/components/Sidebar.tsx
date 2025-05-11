@@ -124,12 +124,12 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       ]
     },
     {
-      title: "Applications",
+      title: "Single Page",
       items: [
         { 
-          title: "Calendar", 
+          title: "About Hero", 
           icon: <Calendar className="w-4 h-4" />, 
-          href: "/dashboard/calendar" 
+          href: "/about-hero" 
         },
         { 
           title: "Projects", 
