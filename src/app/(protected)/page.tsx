@@ -9,7 +9,6 @@ import WelcomeCard from "@/src/components/dashboard/WelcomeCard";
 export default async function Dashboard() {
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-2">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
@@ -28,7 +27,6 @@ export default async function Dashboard() {
         </div>
       </div>
       
-      {/* Welcome card and Statistics */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <WelcomeCard className="lg:col-span-1" />
         <div className="lg:col-span-2">
@@ -36,13 +34,11 @@ export default async function Dashboard() {
         </div>
       </div>
       
-      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <SalesChart className="lg:col-span-2" />
         <VisitorAnalytics className="lg:col-span-1" />
       </div>
       
-      {/* Products & Transactions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <RecentTransactions className="lg:col-span-2" />
         <div className="flex flex-col gap-6 lg:col-span-1">

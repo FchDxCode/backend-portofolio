@@ -158,9 +158,9 @@
     @apply transition-all duration-300 hover:shadow-md hover:-translate-y-1;
   }
   
-  .gradient-text {
+  /* .gradient-text {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-primary via-brand-indigo to-brand-purple;
-  }
+  } */
 
   /* Animations */
   .animate-in {

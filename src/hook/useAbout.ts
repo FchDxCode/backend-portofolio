@@ -7,7 +7,6 @@ export const useAbout = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  // Fetch about data
   const fetchAbout = async () => {
     try {
       setLoading(true);
@@ -21,7 +20,6 @@ export const useAbout = () => {
     }
   };
 
-  // Save about data
   const saveAbout = async (data: Partial<About>) => {
     try {
       setLoading(true);
@@ -37,18 +35,13 @@ export const useAbout = () => {
     }
   };
 
-  // Update images
-  const updateImages = async (
+  const updateImage = async (
     id: number,
-    files: {
-      image?: File;
-      title_image?: File;
-      subtitle_image?: File;
-    }
+    image?: File
   ) => {
     try {
       setLoading(true);
-      const updated = await AboutService.updateImages(id, files);
+      const updated = await AboutService.updateImage(id, image);
       setAbout(updated);
       setError(null);
       return updated;
@@ -60,7 +53,42 @@ export const useAbout = () => {
     }
   };
 
-  // Load initial data
+  const updateTitleData = async (
+    id: number,
+    titleData: Record<string, any>
+  ) => {
+    try {
+      setLoading(true);
+      const updated = await AboutService.updateTitleData(id, titleData);
+      setAbout(updated);
+      setError(null);
+      return updated;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Unknown error occurred'));
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateSubtitleData = async (
+    id: number,
+    subtitleData: Record<string, any>
+  ) => {
+    try {
+      setLoading(true);
+      const updated = await AboutService.updateSubtitleData(id, subtitleData);
+      setAbout(updated);
+      setError(null);
+      return updated;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Unknown error occurred'));
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchAbout();
   }, []);
@@ -71,6 +99,8 @@ export const useAbout = () => {
     error,
     fetchAbout,
     saveAbout,
-    updateImages,
+    updateImage,
+    updateTitleData,
+    updateSubtitleData,
   };
 };

@@ -50,8 +50,8 @@ CREATE TABLE abouts (
     subtitle JSONB,
     description JSONB,
     image TEXT,
-    title_image TEXT,
-    subtitle_image TEXT,
+    title_image JSONB,
+    subtitle_image JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
