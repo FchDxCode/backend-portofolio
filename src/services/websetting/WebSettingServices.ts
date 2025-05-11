@@ -1,36 +1,27 @@
-import { createClient } from "@/src/utils/supabase/client";
-import { WebSetting } from "@/src/models/WebSettingModels";
+'use server';
+
+import { createClient } from '@/src/utils/supabase/client';
+import { WebSetting } from '@/src/models/WebSettingModels';
+import { saveFile, deleteFile } from '@/src/utils/server/FileStorage'; 
 
 const supabase = createClient();
 
 export class WebSettingService {
-  private static TABLE_NAME = 'web_settings';
-  private static STORAGE_BUCKET = 'web-assets';
-  private static MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+  private static TABLE   = 'web_settings';
+  private static FOLDER  = 'web-assets';  
+  private static MAX_SIZE = 5 * 1024 * 1024; 
 
-  /**
-   * Mendapatkan setting website (singleton)
-   */
   static async getSetting(): Promise<WebSetting | null> {
-    try {
-      const { data, error } = await supabase
-        .from(this.TABLE_NAME)
-        .select('*')
-        .order('id', { ascending: true })
-        .limit(1)
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Error fetching web setting:', error);
-      throw error;
-    }
+    const { data, error } = await supabase
+      .from(this.TABLE)
+      .select('*')
+      .order('id', { ascending: true })
+      .limit(1)
+      .single();
+    if (error) throw error;
+    return data;
   }
 
-  /**
-   * Membuat setting baru jika belum ada, atau update jika sudah ada
-   */
   static async upsertSetting(
     setting: Omit<WebSetting, 'id' | 'created_at' | 'updated_at'>,
     logoFile?: File,
@@ -39,129 +30,73 @@ export class WebSettingService {
     portfolioFile?: File
   ): Promise<WebSetting> {
     try {
-      // Cek apakah setting sudah ada
-      const existingSetting = await this.getSetting();
-      
-      // Prepare data
-      const settingData = { ...setting };
+      const existing = await this.getSetting();
       const now = new Date().toISOString();
-      
-      // Handle file uploads if provided
+      const payload: any = { ...setting };
+
       if (logoFile) {
-        settingData.logo = await this.uploadFile(logoFile, 'logo');
+        if (existing?.logo) await this.removeFile(existing.logo);
+        payload.logo = await this.upload(logoFile, 'logo');
       }
-      
       if (faviconFile) {
-        settingData.favicon = await this.uploadFile(faviconFile, 'favicon');
+        if (existing?.favicon) await this.removeFile(existing.favicon);
+        payload.favicon = await this.upload(faviconFile, 'favicon');
       }
-      
       if (cvFile) {
-        settingData.cv = await this.uploadFile(cvFile, 'cv');
+        if (existing?.cv) await this.removeFile(existing.cv);
+        payload.cv = await this.upload(cvFile, 'cv');
       }
-      
       if (portfolioFile) {
-        settingData.portfolio = await this.uploadFile(portfolioFile, 'portfolio');
+        if (existing?.portfolio) await this.removeFile(existing.portfolio);
+        payload.portfolio = await this.upload(portfolioFile, 'portfolio');
       }
 
-      let result;
-      
-      if (existingSetting) {
-        // Update existing record
+      if (existing) {
         const { data, error } = await supabase
-          .from(this.TABLE_NAME)
-          .update({
-            ...settingData,
-            updated_at: now
-          })
-          .eq('id', existingSetting.id)
+          .from(this.TABLE)
+          .update({ ...payload, updated_at: now })
+          .eq('id', existing.id)
           .select()
           .single();
-
         if (error) throw error;
-        result = data;
+        return data;
       } else {
-        // Insert new record
         const { data, error } = await supabase
-          .from(this.TABLE_NAME)
-          .insert({
-            ...settingData,
-            created_at: now,
-            updated_at: now
-          })
+          .from(this.TABLE)
+          .insert({ ...payload, created_at: now, updated_at: now })
           .select()
           .single();
-
         if (error) throw error;
-        result = data;
+        return data;
       }
-
-      return result;
-    } catch (error) {
-      console.error('Error upserting web setting:', error);
-      throw error;
+    } catch (err) {
+      console.error('Error upserting web setting:', err);
+      throw err;
     }
   }
 
-  /**
-   * Upload file for website assets
-   */
-  private static async uploadFile(file: File, prefix: string): Promise<string> {
-    if (file.size > this.MAX_FILE_SIZE) {
-      throw new Error(`File size exceeds 5MB limit`);
-    }
-
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${prefix}-${Date.now()}.${fileExt}`;
-    const filePath = `${this.STORAGE_BUCKET}/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('public')
-      .upload(filePath, file);
-
-    if (uploadError) throw uploadError;
-    return filePath;
-  }
-
-  /**
-   * Delete file from storage
-   */
-  private static async deleteFile(path: string): Promise<void> {
-    if (!path.startsWith('http')) {
-      const { error } = await supabase.storage
-        .from('public')
-        .remove([path]);
-
-      if (error) throw error;
-    }
-  }
-
-  /**
-   * Get public URL for file
-   */
-  static getFileUrl(path?: string): string {
-    if (!path) return '';
-    if (path.startsWith('http')) return path;
-    
-    const { data } = supabase.storage
-      .from('public')
-      .getPublicUrl(path);
-    
-    return data.publicUrl;
-  }
-
-  /**
-   * Get download URL for file (CV, Portfolio)
-   */
-  static getDownloadUrl(path?: string): string {
-    if (!path) return '';
-    if (path.startsWith('http')) return path;
-    
-    const { data } = supabase.storage
-      .from('public')
-      .getPublicUrl(path, {
-        download: true
+  private static async upload(file: File, prefix: string) {
+    if (file.size > this.MAX_SIZE) throw new Error('File size exceeds 5 MB');
+    return saveFile(file, { folder: this.FOLDER, deletePrev: null, })  
+      .then(path => {
+        const ext = file.name.split('.').pop();
+        const renamed = `/uploads/${this.FOLDER}/${prefix}-${Date.now()}.${ext}`;
+        return path.startsWith('/uploads') ? renamed : path;
       });
-    
-    return data.publicUrl;
+  }
+
+  private static async removeFile(path: string) {
+    if (!path || path.startsWith('http')) return; 
+    await deleteFile(path);
+  }
+
+  static getFileUrl(path?: string) {
+    if (!path) return '';
+    if (path.startsWith('http')) return path;
+    return path.startsWith('/') ? path : `/${path}`;
+  }
+
+  static getDownloadUrl(path?: string) {
+    return this.getFileUrl(path);
   }
 }

@@ -6,9 +6,6 @@ const supabase = createClient();
 export class ExperienceCategoryService {
   private static TABLE_NAME = 'experience_categories';
 
-  /**
-   * Get all categories with optional filters
-   */
   static async getAll(params?: {
     sort?: 'created_at' | 'title';
     order?: 'asc' | 'desc';
@@ -56,12 +53,10 @@ export class ExperienceCategoryService {
 
   static async create(category: Omit<ExperienceCategory, 'id' | 'created_at' | 'updated_at'>): Promise<ExperienceCategory> {
     try {
-      // Generate slug if not provided
       if (!category.slug) {
         category.slug = this.generateSlug(category.title?.en || '');
       }
 
-      // Validate unique slug
       const { data: existing } = await supabase
         .from(this.TABLE_NAME)
         .select('slug')

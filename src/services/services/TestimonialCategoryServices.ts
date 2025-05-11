@@ -101,7 +101,6 @@ export class TestimonialCategoryService {
 
   static async delete(id: number): Promise<void> {
     try {
-      // Check if category is being used in testimonials
       const { count } = await supabase
         .from('testimonials')
         .select('*', { count: 'exact' })
@@ -123,7 +122,6 @@ export class TestimonialCategoryService {
     }
   }
 
-  // Helper method untuk mengecek apakah category digunakan
   static async isUsedInTestimonials(id: number): Promise<boolean> {
     const { count } = await supabase
       .from('testimonials')

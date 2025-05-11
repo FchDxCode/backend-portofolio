@@ -1,12 +1,15 @@
-import { createClient } from "@/src/utils/supabase/client";
-import { ServiceHero } from "@/src/models/ServiceModels";
+'use server';
+
+import { createClient } from '@/src/utils/supabase/client';
+import { ServiceHero } from '@/src/models/ServiceModels';
+import { saveFile, deleteFile } from '@/src/utils/server/FileStorage';   
 
 const supabase = createClient();
 
 export class ServiceHeroService {
-  private static TABLE_NAME = 'service_heroes';
-  private static STORAGE_BUCKET = 'service-icons';
-  private static MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+  private static TABLE = 'service_heroes';
+  private static FOLDER = 'service-icons';         
+  private static MAX_SIZE = 5 * 1024 * 1024;       
 
   static async getAll(params?: {
     search?: string;
@@ -14,171 +17,130 @@ export class ServiceHeroService {
     order?: 'asc' | 'desc';
   }): Promise<ServiceHero[]> {
     try {
-      let query = supabase
-        .from(this.TABLE_NAME)
-        .select('*');
+      let q = supabase.from(this.TABLE).select('*');
 
-      if (params?.search) {
-        query = query.or(
+      if (params?.search)
+        q = q.or(
           `title->en.ilike.%${params.search}%,title->id.ilike.%${params.search}%,` +
-          `description->en.ilike.%${params.search}%,description->id.ilike.%${params.search}%`
+            `description->en.ilike.%${params.search}%,description->id.ilike.%${params.search}%`
         );
-      }
 
-      if (params?.sort) {
-        query = query.order(params.sort, { ascending: params.order === 'asc' });
-      } else {
-        query = query.order('created_at', { ascending: false });
-      }
+      q = q.order(params?.sort ?? 'created_at', {
+        ascending: params?.order === 'asc',
+      });
 
-      const { data, error } = await query;
+      const { data, error } = await q;
       if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Error fetching service heroes:', error);
-      throw error;
+      return data ?? [];
+    } catch (err) {
+      console.error('Error fetching service heroes:', err);
+      throw err;
     }
   }
 
   static async getById(id: number): Promise<ServiceHero | null> {
-    try {
-      const { data, error } = await supabase
-        .from(this.TABLE_NAME)
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Error fetching service hero:', error);
-      throw error;
-    }
+    const { data, error } = await supabase
+      .from(this.TABLE)
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error) throw error;
+    return data;
   }
 
   static async create(
-    hero: Omit<ServiceHero, 'id' | 'created_at' | 'updated_at'>, 
+    hero: Omit<ServiceHero, 'id' | 'created_at' | 'updated_at'>,
     iconFile?: File
   ): Promise<ServiceHero> {
     try {
-      const heroData = { ...hero };
-
-      if (iconFile) {
-        heroData.icon = await this.uploadIcon(iconFile);
-      } else if (hero.icon && !this.isValidIconClass(hero.icon)) {
-        throw new Error('Invalid icon format. Must be a file or valid icon class.');
-      }
+      const now = new Date().toISOString();
+      const icon =
+        iconFile
+          ? await this.uploadIcon(iconFile)
+          : hero.icon && !this.isValidIconClass(hero.icon)
+          ? (() => {
+              throw new Error(
+                'Invalid icon format. Must be a file or valid icon class.'
+              );
+            })()
+          : hero.icon ?? '';
 
       const { data, error } = await supabase
-        .from(this.TABLE_NAME)
-        .insert({
-          ...heroData,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
+        .from(this.TABLE)
+        .insert({ ...hero, icon, created_at: now, updated_at: now })
         .select()
         .single();
-
       if (error) throw error;
       return data;
-    } catch (error) {
-      console.error('Error creating service hero:', error);
-      throw error;
+    } catch (err) {
+      console.error('Error creating service hero:', err);
+      throw err;
     }
   }
 
   static async update(
-    id: number, 
-    hero: Partial<ServiceHero>, 
+    id: number,
+    hero: Partial<ServiceHero>,
     newIconFile?: File
   ): Promise<ServiceHero> {
     try {
-      const updateData: Partial<ServiceHero> = {
+      const update: Partial<ServiceHero> = {
         ...hero,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       };
 
       if (newIconFile) {
-        // Delete old icon if it's a file
-        const oldHero = await this.getById(id);
-        if (oldHero?.icon && !this.isValidIconClass(oldHero.icon)) {
-          await this.deleteIcon(oldHero.icon);
-        }
-        updateData.icon = await this.uploadIcon(newIconFile);
+        const old = await this.getById(id);
+        if (old?.icon && !this.isValidIconClass(old.icon))
+          await this.deleteIcon(old.icon);
+        update.icon = await this.uploadIcon(newIconFile);
       } else if (hero.icon && !this.isValidIconClass(hero.icon)) {
         throw new Error('Invalid icon format. Must be a file or valid icon class.');
       }
 
       const { data, error } = await supabase
-        .from(this.TABLE_NAME)
-        .update(updateData)
+        .from(this.TABLE)
+        .update(update)
         .eq('id', id)
         .select()
         .single();
-
       if (error) throw error;
       return data;
-    } catch (error) {
-      console.error('Error updating service hero:', error);
-      throw error;
+    } catch (err) {
+      console.error('Error updating service hero:', err);
+      throw err;
     }
   }
 
-  static async delete(id: number): Promise<void> {
+  static async delete(id: number) {
     try {
       const hero = await this.getById(id);
-      if (hero?.icon && !this.isValidIconClass(hero.icon)) {
+      if (hero?.icon && !this.isValidIconClass(hero.icon))
         await this.deleteIcon(hero.icon);
-      }
 
-      const { error } = await supabase
-        .from(this.TABLE_NAME)
-        .delete()
-        .eq('id', id);
-
+      const { error } = await supabase.from(this.TABLE).delete().eq('id', id);
       if (error) throw error;
-    } catch (error) {
-      console.error('Error deleting service hero:', error);
-      throw error;
+    } catch (err) {
+      console.error('Error deleting service hero:', err);
+      throw err;
     }
   }
 
-  private static isValidIconClass(icon: string): boolean {
+  private static isValidIconClass(icon: string) {
     return /^(fa|bi|material-icons|icon-)/.test(icon);
   }
 
-  private static async uploadIcon(file: File): Promise<string> {
-    if (file.size > this.MAX_FILE_SIZE) {
-      throw new Error('File size exceeds 5MB limit');
-    }
-
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}.${fileExt}`;
-    const filePath = `${this.STORAGE_BUCKET}/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('public')
-      .upload(filePath, file);
-
-    if (uploadError) throw uploadError;
-    return filePath;
+  private static async uploadIcon(file: File) {
+    if (file.size > this.MAX_SIZE) throw new Error('File size exceeds 5 MB limit');
+    return saveFile(file, { folder: this.FOLDER });
   }
 
-  private static async deleteIcon(path: string): Promise<void> {
-    const { error } = await supabase.storage
-      .from('public')
-      .remove([path]);
-
-    if (error) throw error;
+  private static async deleteIcon(path: string) {
+    await deleteFile(path);
   }
 
-  static getIconUrl(path: string): string {
+  static getIconUrl(path: string) {
     if (this.isValidIconClass(path)) return path;
-    
-    const { data } = supabase.storage
-      .from('public')
-      .getPublicUrl(path);
-    
-    return data.publicUrl;
+    return /^https?:\/\//i.test(path) ? path : path.startsWith('/') ? path : `/${path}`;
   }
 }

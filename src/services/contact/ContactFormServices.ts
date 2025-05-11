@@ -6,9 +6,6 @@ const supabase = createClient();
 export class ContactFormService {
   private static TABLE_NAME = 'contact_forms';
 
-  /**
-   * Get all contact form submissions with filters
-   */
   static async getAll(params?: {
     search?: string;
     sort?: 'created_at';
@@ -21,21 +18,18 @@ export class ContactFormService {
         .from(this.TABLE_NAME)
         .select('*', { count: 'exact' });
 
-      // Apply search
       if (params?.search) {
         query = query.or(
           `name.ilike.%${params.search}%,email.ilike.%${params.search}%,subject.ilike.%${params.search}%`
         );
       }
 
-      // Apply sorting
       if (params?.sort) {
         query = query.order(params.sort, { ascending: params.order === 'asc' });
       } else {
         query = query.order('created_at', { ascending: false });
       }
 
-      // Apply pagination
       if (params?.page && params?.limit) {
         const from = (params.page - 1) * params.limit;
         const to = from + params.limit - 1;
@@ -52,9 +46,6 @@ export class ContactFormService {
     }
   }
 
-  /**
-   * Submit new contact form
-   */
   static async submit(form: Omit<ContactForm, 'id' | 'created_at' | 'updated_at'>): Promise<ContactForm> {
     try {
       // Validate required fields
@@ -85,9 +76,6 @@ export class ContactFormService {
     }
   }
 
-  /**
-   * Delete contact form submission
-   */
   static async delete(id: number): Promise<void> {
     try {
       const { error } = await supabase
@@ -102,9 +90,6 @@ export class ContactFormService {
     }
   }
 
-  /**
-   * Bulk delete contact form submissions
-   */
   static async bulkDelete(ids: number[]): Promise<void> {
     try {
       const { error } = await supabase

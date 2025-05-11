@@ -1,12 +1,15 @@
-import { createClient } from "@/src/utils/supabase/client";
-import { ServiceProcess } from "@/src/models/ServiceModels";
+'use server';
+
+import { createClient } from '@/src/utils/supabase/client';
+import { ServiceProcess } from '@/src/models/ServiceModels';
+import { saveFile, deleteFile } from '@/src/utils/server/FileStorage';  
 
 const supabase = createClient();
 
 export class ServiceProcessService {
-  private static TABLE_NAME = 'service_processes';
-  private static STORAGE_BUCKET = 'process-icons';
-  private static MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+  private static TABLE = 'service_processes';
+  private static FOLDER = 'process-icons';         
+  private static MAX_SIZE = 5 * 1024 * 1024;     
 
   static async getAll(params?: {
     benefitId?: number;
@@ -14,225 +17,170 @@ export class ServiceProcessService {
     search?: string;
   }): Promise<ServiceProcess[]> {
     try {
-      let query = supabase
-        .from(this.TABLE_NAME)
+      let q = supabase
+        .from(this.TABLE)
         .select('*')
         .order('order_no', { ascending: true });
 
-      if (params?.benefitId) {
-        query = query.eq('benefit_id', params.benefitId);
-      }
+      if (params?.benefitId) q = q.eq('benefit_id', params.benefitId);
+      if (params?.isActive !== undefined) q = q.eq('is_active', params.isActive);
 
-      if (params?.isActive !== undefined) {
-        query = query.eq('is_active', params.isActive);
-      }
-
-      if (params?.search) {
-        query = query.or(
+      if (params?.search)
+        q = q.or(
           `title->en.ilike.%${params.search}%,title->id.ilike.%${params.search}%,` +
-          `description->en.ilike.%${params.search}%,description->id.ilike.%${params.search}%`
+            `description->en.ilike.%${params.search}%,description->id.ilike.%${params.search}%`
         );
-      }
 
-      const { data, error } = await query;
+      const { data, error } = await q;
       if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Error fetching service processes:', error);
-      throw error;
+      return data ?? [];
+    } catch (err) {
+      console.error('Error fetching service processes:', err);
+      throw err;
     }
   }
 
   static async getById(id: number): Promise<ServiceProcess | null> {
-    try {
-      const { data, error } = await supabase
-        .from(this.TABLE_NAME)
-        .select(`
-          *,
-          service_benefits (id, title)
-        `)
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Error fetching service process:', error);
-      throw error;
-    }
+    const { data, error } = await supabase
+      .from(this.TABLE)
+      .select(
+        `
+        *,
+        service_benefits(id,title)
+      `
+      )
+      .eq('id', id)
+      .single();
+    if (error) throw error;
+    return data;
   }
 
   static async create(
-    process: Omit<ServiceProcess, 'id' | 'created_at' | 'updated_at' | 'order_no'>,
+    proc: Omit<ServiceProcess, 'id' | 'created_at' | 'updated_at' | 'order_no'>,
     iconFile?: File
   ): Promise<ServiceProcess> {
     try {
-      // Get max order_no
-      const { data: maxOrder } = await supabase
-        .from(this.TABLE_NAME)
+      const { data: max } = await supabase
+        .from(this.TABLE)
         .select('order_no')
         .order('order_no', { ascending: false })
         .limit(1)
         .single();
+      const orderNo = (max?.order_no ?? 0) + 1;
 
-      const newOrderNo = (maxOrder?.order_no || 0) + 1;
-      const processData = { ...process };
+      const payload: any = { ...proc };
 
       if (iconFile) {
-        processData.icon = await this.uploadIcon(iconFile);
-      } else if (process.icon && !this.isValidIconClass(process.icon)) {
+        payload.icon = await this.uploadIcon(iconFile);
+      } else if (proc.icon && !this.isValidIconClass(proc.icon)) {
         throw new Error('Invalid icon format');
       }
 
+      const now = new Date().toISOString();
       const { data, error } = await supabase
-        .from(this.TABLE_NAME)
+        .from(this.TABLE)
         .insert({
-          ...processData,
-          order_no: newOrderNo,
-          is_active: process.is_active ?? true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          ...payload,
+          order_no: orderNo,
+          is_active: proc.is_active ?? true,
+          created_at: now,
+          updated_at: now,
         })
         .select()
         .single();
-
       if (error) throw error;
       return data;
-    } catch (error) {
-      console.error('Error creating service process:', error);
-      throw error;
+    } catch (err) {
+      console.error('Error creating service process:', err);
+      throw err;
     }
   }
 
   static async update(
     id: number,
-    process: Partial<ServiceProcess>,
-    newIconFile?: File
+    proc: Partial<ServiceProcess>,
+    newIcon?: File
   ): Promise<ServiceProcess> {
     try {
-      const updateData: Partial<ServiceProcess> = {
-        ...process,
-        updated_at: new Date().toISOString()
-      };
+      const update: any = { ...proc, updated_at: new Date().toISOString() };
 
-      if (newIconFile) {
-        const oldProcess = await this.getById(id);
-        if (oldProcess?.icon && !this.isValidIconClass(oldProcess.icon)) {
-          await this.deleteIcon(oldProcess.icon);
-        }
-        updateData.icon = await this.uploadIcon(newIconFile);
-      } else if (process.icon && !this.isValidIconClass(process.icon)) {
+      if (newIcon) {
+        const old = await this.getById(id);
+        if (old?.icon && !this.isValidIconClass(old.icon))
+          await this.deleteIcon(old.icon);
+        update.icon = await this.uploadIcon(newIcon);
+      } else if (proc.icon && !this.isValidIconClass(proc.icon)) {
         throw new Error('Invalid icon format');
       }
 
       const { data, error } = await supabase
-        .from(this.TABLE_NAME)
-        .update(updateData)
+        .from(this.TABLE)
+        .update(update)
         .eq('id', id)
         .select()
         .single();
-
       if (error) throw error;
       return data;
-    } catch (error) {
-      console.error('Error updating service process:', error);
-      throw error;
+    } catch (err) {
+      console.error('Error updating service process:', err);
+      throw err;
     }
   }
 
-  static async delete(id: number): Promise<void> {
+  static async delete(id: number) {
     try {
-      const process = await this.getById(id);
-      if (!process) return;
+      const proc = await this.getById(id);
+      if (!proc) return;
 
-      // Delete icon if exists and is not a class
-      if (process.icon && !this.isValidIconClass(process.icon)) {
-        await this.deleteIcon(process.icon);
-      }
+      if (proc.icon && !this.isValidIconClass(proc.icon))
+        await this.deleteIcon(proc.icon);
 
-      // Delete process and reorder remaining items
-      const { error } = await supabase
-        .from(this.TABLE_NAME)
-        .delete()
-        .eq('id', id);
-
+      const { error } = await supabase.from(this.TABLE).delete().eq('id', id);
       if (error) throw error;
 
-      // Update order_no for remaining items
-      await this.reorderAfterDelete(process.order_no ?? 0);
-    } catch (error) {
-      console.error('Error deleting service process:', error);
-      throw error;
+      await this.reorderAfterDelete(proc.order_no ?? 0);
+    } catch (err) {
+      console.error('Error deleting service process:', err);
+      throw err;
     }
   }
 
-  static async reorder(newOrder: { id: number; order_no: number }[]): Promise<void> {
-    try {
-      const updates = newOrder.map(({ id, order_no }) => ({
-        id,
-        order_no,
-        updated_at: new Date().toISOString()
-      }));
-
-      const { error } = await supabase
-        .from(this.TABLE_NAME)
-        .upsert(updates);
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error reordering processes:', error);
-      throw error;
-    }
-  }
-
-  private static async reorderAfterDelete(deletedOrderNo: number): Promise<void> {
-    const { error } = await supabase.rpc('reorder_processes_after_delete', {
-      deleted_order_no: deletedOrderNo
-    });
-
+  static async reorder(newOrder: { id: number; order_no: number }[]) {
+    const payload = newOrder.map((o) => ({
+      id: o.id,
+      order_no: o.order_no,
+      updated_at: new Date().toISOString(),
+    }));
+    const { error } = await supabase.from(this.TABLE).upsert(payload);
     if (error) throw error;
   }
 
-  private static isValidIconClass(icon: string): boolean {
+  private static async reorderAfterDelete(no: number) {
+    const { error } = await supabase.rpc('reorder_processes_after_delete', {
+      deleted_order_no: no,
+    });
+    if (error) throw error;
+  }
+
+  private static isValidIconClass(icon: string) {
     return /^(fa|bi|material-icons|icon-)/.test(icon);
   }
 
-  private static async uploadIcon(file: File): Promise<string> {
-    if (file.size > this.MAX_FILE_SIZE) {
-      throw new Error('File size exceeds 5MB limit');
-    }
-
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}.${fileExt}`;
-    const filePath = `${this.STORAGE_BUCKET}/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('public')
-      .upload(filePath, file);
-
-    if (uploadError) throw uploadError;
-    return filePath;
+  private static async uploadIcon(file: File) {
+    if (file.size > this.MAX_SIZE) throw new Error('File exceeds 5 MB');
+    return saveFile(file, { folder: this.FOLDER });
   }
 
-  private static async deleteIcon(path: string): Promise<void> {
-    const { error } = await supabase.storage
-      .from('public')
-      .remove([path]);
-
-    if (error) throw error;
+  private static async deleteIcon(path: string) {
+    await deleteFile(path);
   }
 
-  static getIconUrl(path: string): string {
+  static getIconUrl(path: string) {
     if (this.isValidIconClass(path)) return path;
-    
-    const { data } = supabase.storage
-      .from('public')
-      .getPublicUrl(path);
-    
-    return data.publicUrl;
+    return /^https?:\/\//i.test(path) ? path : path.startsWith('/') ? path : `/${path}`;
   }
 
-  static formatDuration(months: number): string {
+  static formatDuration(months: number) {
     if (months >= 12 && months % 12 === 0) {
       const years = months / 12;
       return `${years} ${years === 1 ? 'year' : 'years'}`;

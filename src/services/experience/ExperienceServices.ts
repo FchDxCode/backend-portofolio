@@ -6,9 +6,6 @@ const supabase = createClient();
 export class ExperienceService {
   private static TABLE_NAME = 'experiences';
 
-  /**
-   * Get all experiences with filters and sorting
-   */
   static async getAll(params?: {
     categoryId?: number;
     skillId?: number;
@@ -23,7 +20,6 @@ export class ExperienceService {
         .from(this.TABLE_NAME)
         .select('*', { count: 'exact' });
 
-      // Apply filters
       if (params?.categoryId) {
         query = query.eq('experience_category_id', params.categoryId);
       }
@@ -39,14 +35,12 @@ export class ExperienceService {
         );
       }
 
-      // Apply sorting
       if (params?.sort) {
         query = query.order(params.sort, { ascending: params.order === 'asc' });
       } else {
         query = query.order('created_at', { ascending: false });
       }
 
-      // Apply pagination
       if (params?.page && params?.limit) {
         const from = (params.page - 1) * params.limit;
         const to = from + params.limit - 1;
@@ -81,15 +75,12 @@ export class ExperienceService {
 
   static async create(experience: Omit<Experience, 'id' | 'created_at' | 'updated_at'>): Promise<Experience> {
     try {
-      // Validate required relations
       await this.validateRelations(experience);
       
-      // Validate company link if provided
       if (experience.company_link && !this.isValidUrl(experience.company_link)) {
         throw new Error('Invalid company link URL');
       }
 
-      // Validate experience_long
       if (experience.experience_long !== undefined && experience.experience_long < 0) {
         throw new Error('Experience duration cannot be negative');
       }
@@ -114,15 +105,12 @@ export class ExperienceService {
 
   static async update(id: number, experience: Partial<Experience>): Promise<Experience> {
     try {
-      // Validate relations if provided
       await this.validateRelations(experience);
 
-      // Validate company link if provided
       if (experience.company_link && !this.isValidUrl(experience.company_link)) {
         throw new Error('Invalid company link URL');
       }
 
-      // Validate experience_long if provided
       if (experience.experience_long !== undefined && experience.experience_long < 0) {
         throw new Error('Experience duration cannot be negative');
       }

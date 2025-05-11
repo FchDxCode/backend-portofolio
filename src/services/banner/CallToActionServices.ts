@@ -6,9 +6,6 @@ const supabase = createClient();
 export class CallToActionService {
   private static TABLE_NAME = 'call_to_actions';
 
-  /**
-   * Get the singleton call to action data
-   */
   static async get(): Promise<CallToAction | null> {
     try {
       const { data, error } = await supabase
@@ -24,9 +21,6 @@ export class CallToActionService {
     }
   }
 
-  /**
-   * Create or update the singleton call to action
-   */
   static async save(cta: Partial<CallToAction>): Promise<CallToAction> {
     try {
       const existingCta = await this.get();

@@ -1,11 +1,13 @@
-import { createClient } from "@/src/utils/supabase/client";
-import { Project, ProjectSkill } from "@/src/models/ProjectModels";
-
+import { createClient } from '@/src/utils/supabase/client';
+import { Project } from '@/src/models/ProjectModels';
+import { deleteFile } from '@/src/utils/server/FileStorage';          // util lokal
+import { ProjectImageService } from '@/src/services/project/ProjectImageServices';
 const supabase = createClient();
 
 export class ProjectService {
   private static TABLE_NAME = 'projects';
   private static SKILL_TABLE = 'project_skills';
+  private static IMAGE_TABLE = 'project_images';
 
   /**
    * Get all projects with filters
@@ -164,27 +166,33 @@ export class ProjectService {
     }
   }
 
-  /**
-   * Delete project and all related data
-   */
   static async delete(id: number): Promise<void> {
     try {
-      // Delete project skills
-      await supabase
-        .from(this.SKILL_TABLE)
-        .delete()
+      /* 1. hapus semua skill terkait */
+      await supabase.from(this.SKILL_TABLE).delete().eq('project_id', id);
+
+      /* 2. ambil & hapus semua image + file fisik */
+      const { data: images, error: imgErr } = await supabase
+        .from(this.IMAGE_TABLE)
+        .select('*')
         .eq('project_id', id);
 
-      // Delete project
-      const { error } = await supabase
-        .from(this.TABLE_NAME)
-        .delete()
-        .eq('id', id);
+      if (imgErr) throw imgErr;
 
+      if (images && images.length) {
+        // hapus file lokal
+        await Promise.all(images.map((img) => deleteFile(img.image)));
+
+        // hapus record image
+        await supabase.from(this.IMAGE_TABLE).delete().eq('project_id', id);
+      }
+
+      /* 3. hapus record project */
+      const { error } = await supabase.from(this.TABLE_NAME).delete().eq('id', id);
       if (error) throw error;
-    } catch (error) {
-      console.error('Error deleting project:', error);
-      throw error;
+    } catch (err) {
+      console.error('Error deleting project:', err);
+      throw err;
     }
   }
 

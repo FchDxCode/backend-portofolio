@@ -6,9 +6,6 @@ const supabase = createClient();
 export class CallmeBannerService {
   private static TABLE_NAME = 'callme_banners';
 
-  /**
-   * Get the singleton callme banner data
-   */
   static async get(): Promise<CallmeBanner | null> {
     try {
       const { data, error } = await supabase
@@ -24,15 +21,11 @@ export class CallmeBannerService {
     }
   }
 
-  /**
-   * Create or update the singleton callme banner
-   */
   static async save(banner: Partial<CallmeBanner>): Promise<CallmeBanner> {
     try {
       const existingBanner = await this.get();
 
       if (existingBanner) {
-        // Update
         const { data, error } = await supabase
           .from(this.TABLE_NAME)
           .update({
@@ -46,7 +39,6 @@ export class CallmeBannerService {
         if (error) throw error;
         return data;
       } else {
-        // Create
         const { data, error } = await supabase
           .from(this.TABLE_NAME)
           .insert({

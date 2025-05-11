@@ -6,9 +6,6 @@ const supabase = createClient();
 export class ServiceBenefitService {
   private static TABLE_NAME = 'service_benefits';
 
-  /**
-   * Get all service benefits with optional search and sorting
-   */
   static async getAll(params?: {
     search?: string;
     sort?: 'created_at' | 'title';
@@ -96,7 +93,6 @@ export class ServiceBenefitService {
 
   static async delete(id: number): Promise<void> {
     try {
-      // Check if benefit is being used in other tables
       const { count: featuredServiceCount } = await supabase
         .from('featured_services')
         .select('*', { count: 'exact' })

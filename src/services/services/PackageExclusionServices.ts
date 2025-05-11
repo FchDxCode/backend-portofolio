@@ -88,7 +88,6 @@ export class PackageExclusionService {
         updated_at: new Date().toISOString()
       };
 
-      // Auto-generate slug only if title is updated but slug isn't provided
       if (exclusion.title?.en && !exclusion.slug) {
         updateData.slug = this.generateSlug(exclusion.title.en);
       }
@@ -110,7 +109,6 @@ export class PackageExclusionService {
 
   static async delete(id: number): Promise<void> {
     try {
-      // Check if exclusion is being used in package_pricing
       const { count: pricingCount } = await supabase
         .from('package_pricing')
         .select('*', { count: 'exact' })
@@ -174,7 +172,6 @@ export class PackageExclusionService {
 
   static async bulkDelete(ids: number[]): Promise<void> {
     try {
-      // Check if any exclusions are being used
       const { count: pricingCount } = await supabase
         .from('package_pricing')
         .select('*', { count: 'exact' })

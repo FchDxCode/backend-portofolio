@@ -55,7 +55,6 @@ export class PackageBenefitService {
     benefit: Omit<PackageBenefit, 'id' | 'created_at' | 'updated_at'>
   ): Promise<PackageBenefit> {
     try {
-      // If slug is not provided, generate from title
       const benefitData = {
         ...benefit,
         slug: benefit.slug || this.generateSlug(benefit.title?.en || '')
@@ -84,7 +83,6 @@ export class PackageBenefitService {
     benefit: Partial<PackageBenefit>
   ): Promise<PackageBenefit> {
     try {
-      // If title is updated but slug isn't, generate new slug
       const updateData: Partial<PackageBenefit> = {
         ...benefit,
         updated_at: new Date().toISOString()
@@ -111,7 +109,6 @@ export class PackageBenefitService {
 
   static async delete(id: number): Promise<void> {
     try {
-      // Check if benefit is being used in package_pricing
       const { count: pricingCount } = await supabase
         .from('package_pricing')
         .select('*', { count: 'exact' })
@@ -175,7 +172,6 @@ export class PackageBenefitService {
 
   static async bulkDelete(ids: number[]): Promise<void> {
     try {
-      // Check if any benefits are being used
       const { count: pricingCount } = await supabase
         .from('package_pricing')
         .select('*', { count: 'exact' })
@@ -200,9 +196,9 @@ export class PackageBenefitService {
   private static generateSlug(text: string): string {
     return text
       .toLowerCase()
-      .replace(/[^\w\s-]/g, '')  // Remove special characters
-      .replace(/\s+/g, '-')      // Replace spaces with -
-      .replace(/-+/g, '-')       // Replace multiple - with single -
+      .replace(/[^\w\s-]/g, '')  
+      .replace(/\s+/g, '-')      
+      .replace(/-+/g, '-')      
       .trim();
   }
 }

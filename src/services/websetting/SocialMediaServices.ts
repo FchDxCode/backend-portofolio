@@ -1,12 +1,16 @@
-import { createClient } from "@/src/utils/supabase/client";
-import { SocialMedia } from "@/src/models/WebSettingModels";
+// services/SocialMediaService.ts
+'use server';
+
+import { createClient } from '@/src/utils/supabase/client';
+import { SocialMedia } from '@/src/models/WebSettingModels';
+import { saveFile, deleteFile } from '@/src/utils/server/FileStorage';  
 
 const supabase = createClient();
 
 export class SocialMediaService {
-  private static TABLE_NAME = 'social_media';
-  private static STORAGE_BUCKET = 'social-media-icons';
-  private static MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+  private static TABLE  = 'social_media';
+  private static FOLDER = 'social-media-icons';      
+  private static MAX_SIZE = 5 * 1024 * 1024;        
 
   static async getAll(params?: {
     search?: string;
@@ -14,179 +18,121 @@ export class SocialMediaService {
     order?: 'asc' | 'desc';
   }): Promise<SocialMedia[]> {
     try {
-      let query = supabase
-        .from(this.TABLE_NAME)
-        .select('*');
+      let q = supabase.from(this.TABLE).select('*');
 
       if (params?.search) {
-        query = query.or(`
-          title->en.ilike.%${params.search}%,
-          title->id.ilike.%${params.search}%,
-          link.ilike.%${params.search}%
-        `);
+        q = q.or(
+          `title->en.ilike.%${params.search}%,
+           title->id.ilike.%${params.search}%,
+           link.ilike.%${params.search}%`
+        );
       }
 
-      if (params?.sort) {
-        query = query.order(params.sort, { ascending: params.order === 'asc' });
-      } else {
-        query = query.order('created_at', { ascending: false });
-      }
+      q = q.order(params?.sort ?? 'created_at', {
+        ascending: params?.order === 'asc',
+      });
 
-      const { data, error } = await query;
+      const { data, error } = await q;
       if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Error fetching social media:', error);
-      throw error;
+      return data ?? [];
+    } catch (err) {
+      console.error('Error fetching social media:', err);
+      throw err;
     }
   }
 
   static async getById(id: number): Promise<SocialMedia | null> {
-    try {
-      const { data, error } = await supabase
-        .from(this.TABLE_NAME)
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Error fetching social media:', error);
-      throw error;
-    }
+    const { data, error } = await supabase
+      .from(this.TABLE)
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error) throw error;
+    return data;
   }
 
   static async create(
-    socialMedia: Omit<SocialMedia, 'id' | 'created_at' | 'updated_at'>,
+    sm: Omit<SocialMedia, 'id' | 'created_at' | 'updated_at'>,
     iconFile?: File
   ): Promise<SocialMedia> {
     try {
-      const socialMediaData = { ...socialMedia };
+      const payload: any = { ...sm };
 
-      // Handle icon upload if provided
-      if (iconFile) {
-        socialMediaData.icon = await this.uploadIcon(iconFile);
-      }
+      if (iconFile) payload.icon = await this.uploadIcon(iconFile);
 
+      const now = new Date().toISOString();
       const { data, error } = await supabase
-        .from(this.TABLE_NAME)
-        .insert({
-          ...socialMediaData,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
+        .from(this.TABLE)
+        .insert({ ...payload, created_at: now, updated_at: now })
         .select()
         .single();
-
       if (error) throw error;
       return data;
-    } catch (error) {
-      console.error('Error creating social media:', error);
-      throw error;
+    } catch (err) {
+      console.error('Error creating social media:', err);
+      throw err;
     }
   }
 
   static async update(
     id: number,
-    socialMedia: Partial<SocialMedia>,
+    sm: Partial<SocialMedia>,
     newIconFile?: File
   ): Promise<SocialMedia> {
     try {
-      const updateData: Partial<SocialMedia> = {
-        ...socialMedia,
-        updated_at: new Date().toISOString()
-      };
+      const update: any = { ...sm, updated_at: new Date().toISOString() };
 
-      // Handle icon update if provided
       if (newIconFile) {
-        const oldSocialMedia = await this.getById(id);
-        if (oldSocialMedia?.icon) {
-          await this.deleteIcon(oldSocialMedia.icon);
-        }
-        updateData.icon = await this.uploadIcon(newIconFile);
+        const old = await this.getById(id);
+        if (old?.icon) await this.deleteIcon(old.icon);
+        update.icon = await this.uploadIcon(newIconFile);
       }
 
       const { data, error } = await supabase
-        .from(this.TABLE_NAME)
-        .update(updateData)
+        .from(this.TABLE)
+        .update(update)
         .eq('id', id)
         .select()
         .single();
-
       if (error) throw error;
       return data;
-    } catch (error) {
-      console.error('Error updating social media:', error);
-      throw error;
+    } catch (err) {
+      console.error('Error updating social media:', err);
+      throw err;
     }
   }
 
-  static async delete(id: number): Promise<void> {
+  static async delete(id: number) {
     try {
-      const socialMedia = await this.getById(id);
-      if (!socialMedia) return;
+      const sm = await this.getById(id);
+      if (sm?.icon) await this.deleteIcon(sm.icon);
 
-      // Delete icon if exists
-      if (socialMedia.icon) {
-        await this.deleteIcon(socialMedia.icon);
-      }
-
-      const { error } = await supabase
-        .from(this.TABLE_NAME)
-        .delete()
-        .eq('id', id);
-
+      const { error } = await supabase.from(this.TABLE).delete().eq('id', id);
       if (error) throw error;
-    } catch (error) {
-      console.error('Error deleting social media:', error);
-      throw error;
+    } catch (err) {
+      console.error('Error deleting social media:', err);
+      throw err;
     }
   }
 
-  private static async uploadIcon(file: File): Promise<string> {
-    if (file.size > this.MAX_FILE_SIZE) {
-      throw new Error('File size exceeds 5MB limit');
-    }
-
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}.${fileExt}`;
-    const filePath = `${this.STORAGE_BUCKET}/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('public')
-      .upload(filePath, file);
-
-    if (uploadError) throw uploadError;
-    return filePath;
+  private static async uploadIcon(file: File) {
+    if (file.size > this.MAX_SIZE) throw new Error('File size exceeds 5 MB');
+    return saveFile(file, { folder: this.FOLDER });
   }
 
-  private static async deleteIcon(path: string): Promise<void> {
-    if (!path.startsWith('http')) {
-      const { error } = await supabase.storage
-        .from('public')
-        .remove([path]);
-
-      if (error) throw error;
-    }
+  private static async deleteIcon(path: string) {
+    if (!path || path.startsWith('http')) return;   
+    await deleteFile(path);
   }
 
-  static getIconUrl(path?: string): string {
+  static getIconUrl(path?: string) {
     if (!path) return '';
-    
-    // Handle fa icons (fontawesome)
-    if (path.startsWith('fa') || path.startsWith('bi') || path.startsWith('icon-')) {
+
+    if (path.startsWith('fa') || path.startsWith('bi') || path.startsWith('icon-'))
       return path;
-    }
-    
-    // Handle direct URLs
+
     if (path.startsWith('http')) return path;
-    
-    // Handle storage paths
-    const { data } = supabase.storage
-      .from('public')
-      .getPublicUrl(path);
-    
-    return data.publicUrl;
+
+    return path.startsWith('/') ? path : `/${path}`;
   }
 }

@@ -6,9 +6,6 @@ type PolicyType = PrivacyPolicy | TermsOfService | CookiePolicy;
 const supabase = createClient();
 
 export class PolicyService {
-  /**
-   * Get singleton policy (privacy, terms, cookie)
-   */
   static async getPolicy<T extends PolicyType>(tableName: string): Promise<T | null> {
     try {
       const { data, error } = await supabase
@@ -26,25 +23,19 @@ export class PolicyService {
     }
   }
 
-  /**
-   * Upsert policy (create if not exists, update if exists)
-   */
   static async upsertPolicy<T extends PolicyType>(
     tableName: string,
     policy: Omit<T, 'id' | 'created_at' | 'updated_at'>
   ): Promise<T> {
     try {
-      // Check if policy exists
       const existingPolicy = await this.getPolicy<T>(tableName);
       
-      // Prepare data
       const policyData = { ...policy };
       const now = new Date().toISOString();
 
       let result;
       
       if (existingPolicy) {
-        // Update existing record
         const { data, error } = await supabase
           .from(tableName)
           .update({
@@ -58,7 +49,6 @@ export class PolicyService {
         if (error) throw error;
         result = data as T;
       } else {
-        // Insert new record
         const { data, error } = await supabase
           .from(tableName)
           .insert({
@@ -80,7 +70,6 @@ export class PolicyService {
     }
   }
 
-  // PrivacyPolicy methods
   static async getPrivacyPolicy(): Promise<PrivacyPolicy | null> {
     return this.getPolicy<PrivacyPolicy>('privacy_policy');
   }
@@ -91,7 +80,6 @@ export class PolicyService {
     return this.upsertPolicy<PrivacyPolicy>('privacy_policy', policy);
   }
 
-  // TermsOfService methods
   static async getTermsOfService(): Promise<TermsOfService | null> {
     return this.getPolicy<TermsOfService>('terms_of_service');
   }
@@ -102,7 +90,6 @@ export class PolicyService {
     return this.upsertPolicy<TermsOfService>('terms_of_service', terms);
   }
 
-  // CookiePolicy methods
   static async getCookiePolicy(): Promise<CookiePolicy | null> {
     return this.getPolicy<CookiePolicy>('cookie_policy');
   }

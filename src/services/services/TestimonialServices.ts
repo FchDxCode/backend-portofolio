@@ -1,12 +1,15 @@
+"use server";
+
 import { createClient } from "@/src/utils/supabase/client";
 import { Testimonial } from "@/src/models/ServiceModels";
+import { saveFile, deleteFile } from '@/src/utils/server/FileStorage';
 
 const supabase = createClient();
 
 export class TestimonialService {
   private static TABLE_NAME = 'testimonials';
   private static STORAGE_BUCKET = 'testimonial-profiles';
-  private static MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+  private static MAX_FILE_SIZE = 5 * 1024 * 1024; 
 
   static async getAll(params?: {
     search?: string;
@@ -185,133 +188,83 @@ export class TestimonialService {
     testimonial: Omit<Testimonial, 'id' | 'created_at' | 'updated_at'>,
     profileFile?: File
   ): Promise<Testimonial> {
-    try {
-      if (testimonial.star !== undefined && (testimonial.star < 1 || testimonial.star > 5)) {
-        throw new Error('Star rating must be between 1 and 5');
-      }
-
-      const testimonialData = { ...testimonial };
-
-      if (profileFile) {
-        testimonialData.profile = await this.uploadProfile(profileFile);
-      }
-
-      const { data, error } = await supabase
-        .from(this.TABLE_NAME)
-        .insert({
-          ...testimonialData,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Error creating testimonial:', error);
-      throw error;
+    if (
+      testimonial.star !== undefined &&
+      (testimonial.star < 1 || testimonial.star > 5)
+    ) {
+      throw new Error('Star rating must be between 1 and 5');
     }
+
+    const payload: any = { ...testimonial };
+
+    if (profileFile) payload.profile = await this.uploadProfile(profileFile);
+
+    const now = new Date().toISOString();
+    const { data, error } = await supabase
+      .from(this.TABLE_NAME)
+      .insert({ ...payload, created_at: now, updated_at: now })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
   }
+
 
   static async update(
     id: number,
     testimonial: Partial<Testimonial>,
     newProfileFile?: File
   ): Promise<Testimonial> {
-    try {
-      if (testimonial.star !== undefined && (testimonial.star < 1 || testimonial.star > 5)) {
-        throw new Error('Star rating must be between 1 and 5');
-      }
-
-      const updateData: Partial<Testimonial> = {
-        ...testimonial,
-        updated_at: new Date().toISOString()
-      };
-
-      if (newProfileFile) {
-        const oldTestimonial = await this.getById(id);
-        if (oldTestimonial?.profile) {
-          await this.deleteProfile(oldTestimonial.profile);
-        }
-        updateData.profile = await this.uploadProfile(newProfileFile);
-      }
-
-      const { data, error } = await supabase
-        .from(this.TABLE_NAME)
-        .update(updateData)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Error updating testimonial:', error);
-      throw error;
-    }
-  }
-
-  static async delete(id: number): Promise<void> {
-    try {
-      const testimonial = await this.getById(id);
-      if (!testimonial) return;
-
-      if (testimonial.profile) {
-        await this.deleteProfile(testimonial.profile);
-      }
-
-      const { error } = await supabase
-        .from(this.TABLE_NAME)
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error deleting testimonial:', error);
-      throw error;
-    }
-  }
-
-  private static async uploadProfile(file: File): Promise<string> {
-    if (file.size > this.MAX_FILE_SIZE) {
-      throw new Error('File size exceeds 5MB limit');
+    if (
+      testimonial.star !== undefined &&
+      (testimonial.star < 1 || testimonial.star > 5)
+    ) {
+      throw new Error('Star rating must be between 1 and 5');
     }
 
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}.${fileExt}`;
-    const filePath = `${this.STORAGE_BUCKET}/${fileName}`;
+    const update: any = { ...testimonial, updated_at: new Date().toISOString() };
 
-    const { error: uploadError } = await supabase.storage
-      .from('public')
-      .upload(filePath, file);
-
-    if (uploadError) throw uploadError;
-    return filePath;
-  }
-
-  private static async deleteProfile(path: string): Promise<void> {
-    if (!path.startsWith('http')) {
-      const { error } = await supabase.storage
-        .from('public')
-        .remove([path]);
-
-      if (error) throw error;
+    if (newProfileFile) {
+      const old = await this.getById(id);
+      if (old?.profile) await this.deleteProfile(old.profile);
+      update.profile = await this.uploadProfile(newProfileFile);
     }
+
+    const { data, error } = await supabase
+      .from(this.TABLE_NAME)
+      .update(update)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
   }
 
-  static getProfileUrl(path: string): string {
+  static async delete(id: number) {
+    const t = await this.getById(id);
+    if (t?.profile) await this.deleteProfile(t.profile);
+
+    const { error } = await supabase.from(this.TABLE_NAME).delete().eq('id', id);
+    if (error) throw error;
+  }
+
+  private static async uploadProfile(file: File) {
+    if (file.size > this.MAX_FILE_SIZE) throw new Error('File size exceeds 5 MB');
+    return saveFile(file, { folder: this.STORAGE_BUCKET });
+  }
+
+  private static async deleteProfile(path: string) {
+    if (!path || path.startsWith('http')) return;   
+    await deleteFile(path);
+  }
+
+  static getProfileUrl(path: string) {
     if (!path) return '';
     if (path.startsWith('http')) return path;
-    
-    const { data } = supabase.storage
-      .from('public')
-      .getPublicUrl(path);
-    
-    return data.publicUrl;
+    return path.startsWith('/') ? path : `/${path}`;
   }
 
-  static formatStars(stars: number = 0): string {
+  static formatStars(stars = 0) {
     return '⭐'.repeat(Math.min(Math.max(stars, 0), 5));
   }
 

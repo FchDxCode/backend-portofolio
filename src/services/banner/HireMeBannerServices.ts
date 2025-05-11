@@ -6,9 +6,6 @@ const supabase = createClient();
 export class HireMeBannerService {
   private static TABLE_NAME = 'hire_me_banners';
 
-  /**
-   * Get the singleton hire me banner data
-   */
   static async get(): Promise<HireMeBanner | null> {
     try {
       const { data, error } = await supabase
@@ -24,9 +21,6 @@ export class HireMeBannerService {
     }
   }
 
-  /**
-   * Create or update the singleton hire me banner
-   */
   static async save(banner: Partial<HireMeBanner>): Promise<HireMeBanner> {
     try {
       const existingBanner = await this.get();

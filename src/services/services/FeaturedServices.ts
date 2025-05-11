@@ -1,12 +1,15 @@
-import { createClient } from "@/src/utils/supabase/client";
-import { FeaturedService } from "@/src/models/ServiceModels";
+'use server';
+
+import { createClient } from '@/src/utils/supabase/client';
+import { FeaturedService } from '@/src/models/ServiceModels';
+import { saveFile, deleteFile } from '@/src/utils/server/FileStorage';   
 
 const supabase = createClient();
 
 export class FeaturedServiceService {
-  private static TABLE_NAME = 'featured_services';
-  private static STORAGE_BUCKET = 'featured-icons';
-  private static MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+  private static TABLE = 'featured_services';
+  private static FOLDER = 'featured-icons';     
+  private static MAX_SIZE = 5 * 1024 * 1024;       
 
   static async getAll(params?: {
     benefitId?: number;
@@ -16,217 +19,132 @@ export class FeaturedServiceService {
     order?: 'asc' | 'desc';
   }): Promise<FeaturedService[]> {
     try {
-      let query = supabase
-        .from(this.TABLE_NAME)
-        .select('*');
+      let q = supabase.from(this.TABLE).select('*');
 
-      if (params?.benefitId) {
-        query = query.eq('benefit_id', params.benefitId);
-      }
+      if (params?.benefitId) q = q.eq('benefit_id', params.benefitId);
+      if (params?.skillId) q = q.eq('skill_id', params.skillId);
 
-      if (params?.skillId) {
-        query = query.eq('skill_id', params.skillId);
-      }
-
-      if (params?.search) {
-        query = query.or(
+      if (params?.search)
+        q = q.or(
           `title->en.ilike.%${params.search}%,title->id.ilike.%${params.search}%,` +
-          `description->en.ilike.%${params.search}%,description->id.ilike.%${params.search}%`
+            `description->en.ilike.%${params.search}%,description->id.ilike.%${params.search}%`
         );
-      }
 
-      if (params?.sort) {
-        query = query.order(params.sort, { ascending: params.order === 'asc' });
-      } else {
-        query = query.order('created_at', { ascending: false });
-      }
+      q = q.order(params?.sort ?? 'created_at', {
+        ascending: params?.order === 'asc',
+      });
 
-      const { data, error } = await query;
+      const { data, error } = await q;
       if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Error fetching featured services:', error);
-      throw error;
+      return data ?? [];
+    } catch (err) {
+      console.error('Error fetching featured services:', err);
+      throw err;
     }
   }
 
   static async getById(id: number): Promise<FeaturedService | null> {
-    try {
-      const { data, error } = await supabase
-        .from(this.TABLE_NAME)
-        .select(`
-          *,
-          service_benefits (id, title),
-          skills (id, title)
-        `)
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Error fetching featured service:', error);
-      throw error;
-    }
+    const { data, error } = await supabase
+      .from(this.TABLE)
+      .select(
+        `
+        *,
+        service_benefits(id,title),
+        skills(id,title)
+      `
+      )
+      .eq('id', id)
+      .single();
+    if (error) throw error;
+    return data;
   }
 
   static async create(
-    service: Omit<FeaturedService, 'id' | 'created_at' | 'updated_at'>,
+    svc: Omit<FeaturedService, 'id' | 'created_at' | 'updated_at'>,
     iconFile?: File
   ): Promise<FeaturedService> {
-    try {
-      // Validate relations
-      await this.validateRelations(service);
+    await this.validateRelations(svc);
 
-      const serviceData = { ...service };
+    const now = new Date().toISOString();
+    const icon =
+      iconFile
+        ? await this.uploadIcon(iconFile)
+        : svc.icon && !this.isValidIconClass(svc.icon)
+        ? (() => {
+            throw new Error('Invalid icon format. Must be a file or valid icon class.');
+          })()
+        : svc.icon ?? '';
 
-      if (iconFile) {
-        serviceData.icon = await this.uploadIcon(iconFile);
-      } else if (service.icon && !this.isValidIconClass(service.icon)) {
-        throw new Error('Invalid icon format. Must be a file or valid icon class.');
-      }
-
-      const { data, error } = await supabase
-        .from(this.TABLE_NAME)
-        .insert({
-          ...serviceData,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Error creating featured service:', error);
-      throw error;
-    }
+    const { data, error } = await supabase
+      .from(this.TABLE)
+      .insert({ ...svc, icon, created_at: now, updated_at: now })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
   }
 
   static async update(
     id: number,
-    service: Partial<FeaturedService>,
-    newIconFile?: File
+    svc: Partial<FeaturedService>,
+    newIcon?: File
   ): Promise<FeaturedService> {
-    try {
-      // Validate relations if provided
-      if (service.benefit_id || service.skill_id) {
-        await this.validateRelations(service);
-      }
+    if (svc.benefit_id || svc.skill_id) await this.validateRelations(svc);
 
-      const updateData: Partial<FeaturedService> = {
-        ...service,
-        updated_at: new Date().toISOString()
-      };
+    const update: Partial<FeaturedService> = { ...svc, updated_at: new Date().toISOString() };
 
-      if (newIconFile) {
-        // Delete old icon if it's a file
-        const oldService = await this.getById(id);
-        if (oldService?.icon && !this.isValidIconClass(oldService.icon)) {
-          await this.deleteIcon(oldService.icon);
-        }
-        updateData.icon = await this.uploadIcon(newIconFile);
-      } else if (service.icon && !this.isValidIconClass(service.icon)) {
-        throw new Error('Invalid icon format. Must be a file or valid icon class.');
-      }
-
-      const { data, error } = await supabase
-        .from(this.TABLE_NAME)
-        .update(updateData)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Error updating featured service:', error);
-      throw error;
-    }
-  }
-
-  static async delete(id: number): Promise<void> {
-    try {
-      const service = await this.getById(id);
-      if (service?.icon && !this.isValidIconClass(service.icon)) {
-        await this.deleteIcon(service.icon);
-      }
-
-      const { error } = await supabase
-        .from(this.TABLE_NAME)
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error deleting featured service:', error);
-      throw error;
-    }
-  }
-
-  private static async validateRelations(service: Partial<FeaturedService>): Promise<void> {
-    if (service.benefit_id) {
-      const { data: benefit } = await supabase
-        .from('service_benefits')
-        .select('id')
-        .eq('id', service.benefit_id)
-        .single();
-
-      if (!benefit) {
-        throw new Error('Invalid benefit ID');
-      }
+    if (newIcon) {
+      const old = await this.getById(id);
+      if (old?.icon && !this.isValidIconClass(old.icon)) await this.deleteIcon(old.icon);
+      update.icon = await this.uploadIcon(newIcon);
+    } else if (svc.icon && !this.isValidIconClass(svc.icon)) {
+      throw new Error('Invalid icon format. Must be a file or valid icon class.');
     }
 
-    if (service.skill_id) {
-      const { data: skill } = await supabase
-        .from('skills')
-        .select('id')
-        .eq('id', service.skill_id)
-        .single();
-
-      if (!skill) {
-        throw new Error('Invalid skill ID');
-      }
-    }
+    const { data, error } = await supabase
+      .from(this.TABLE)
+      .update(update)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
   }
 
-  private static isValidIconClass(icon: string): boolean {
-    return /^(fa|bi|material-icons|icon-)/.test(icon);
-  }
+  static async delete(id: number) {
+    const svc = await this.getById(id);
+    if (svc?.icon && !this.isValidIconClass(svc.icon)) await this.deleteIcon(svc.icon);
 
-  private static async uploadIcon(file: File): Promise<string> {
-    if (file.size > this.MAX_FILE_SIZE) {
-      throw new Error('File size exceeds 5MB limit');
-    }
-
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}.${fileExt}`;
-    const filePath = `${this.STORAGE_BUCKET}/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('public')
-      .upload(filePath, file);
-
-    if (uploadError) throw uploadError;
-    return filePath;
-  }
-
-  private static async deleteIcon(path: string): Promise<void> {
-    const { error } = await supabase.storage
-      .from('public')
-      .remove([path]);
-
+    const { error } = await supabase.from(this.TABLE).delete().eq('id', id);
     if (error) throw error;
   }
 
-  static getIconUrl(path: string): string {
+  private static async validateRelations(svc: Partial<FeaturedService>) {
+    if (svc.benefit_id) {
+      const { data } = await supabase.from('service_benefits').select('id').eq('id', svc.benefit_id).single();
+      if (!data) throw new Error('Invalid benefit ID');
+    }
+    if (svc.skill_id) {
+      const { data } = await supabase.from('skills').select('id').eq('id', svc.skill_id).single();
+      if (!data) throw new Error('Invalid skill ID');
+    }
+  }
+
+  private static isValidIconClass(icon: string) {
+    return /^(fa|bi|material-icons|icon-)/.test(icon);
+  }
+
+  private static async uploadIcon(file: File) {
+    if (file.size > this.MAX_SIZE) throw new Error('File size exceeds 5 MB limit');
+    return saveFile(file, { folder: this.FOLDER });
+  }
+
+  private static async deleteIcon(path: string) {
+    await deleteFile(path);
+  }
+
+  static getIconUrl(path: string) {
     if (this.isValidIconClass(path)) return path;
-    
-    const { data } = supabase.storage
-      .from('public')
-      .getPublicUrl(path);
-    
-    return data.publicUrl;
+    return /^https?:\/\//i.test(path) ? path : path.startsWith('/') ? path : `/${path}`;
   }
 }

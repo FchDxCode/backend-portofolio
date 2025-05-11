@@ -16,7 +16,6 @@ export class FaqService {
         .from(this.TABLE_NAME)
         .select('*');
 
-      // Search in title & description (both languages)
       if (params?.search) {
         query = query.or(`
           title->en.ilike.%${params.search}%,
@@ -26,7 +25,6 @@ export class FaqService {
         `);
       }
 
-      // Sort by date
       if (params?.sort) {
         query = query.order(params.sort, { ascending: params.order === 'asc' });
       } else {

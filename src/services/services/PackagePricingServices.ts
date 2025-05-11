@@ -15,7 +15,6 @@ export class PackagePricingService {
     withRelations?: boolean;
   }): Promise<PackagePricing[]> {
     try {
-      // Query dasar tanpa relasi
       let query = supabase.from(this.TABLE_NAME).select('*');
 
       if (params?.search) {
@@ -45,12 +44,10 @@ export class PackagePricingService {
       const { data, error } = await query;
       if (error) throw error;
       
-      // Jika tidak perlu relasi, langsung return
       if (!params?.withRelations || !data?.length) {
         return data || [];
       }
       
-      // Jika perlu relasi, ambil data relasi secara terpisah
       const pricingWithRelations = await Promise.all(data.map(async (pricing) => {
         const [benefits, exclusions] = await Promise.all([
           pricing.benefit_id ? this.getBenefits(pricing.benefit_id) : null,
@@ -73,7 +70,6 @@ export class PackagePricingService {
 
   static async getById(id: number, withRelations = false): Promise<PackagePricing | null> {
     try {
-      // Query dasar tanpa relasi
       const { data, error } = await supabase
         .from(this.TABLE_NAME)
         .select('*')
@@ -83,18 +79,15 @@ export class PackagePricingService {
       if (error) throw error;
       if (!data) return null;
 
-      // Jika tidak perlu relasi, langsung return
       if (!withRelations) {
         return data;
       }
       
-      // Jika perlu relasi, ambil data relasi secara terpisah
       const [benefits, exclusions] = await Promise.all([
         data.benefit_id ? this.getBenefitById(data.benefit_id) : null,
         data.exclusion_id ? this.getExclusionById(data.exclusion_id) : null
       ]);
       
-      // Gabungkan data utama dengan relasi
       return {
         ...data,
         package_benefits: benefits,
@@ -108,12 +101,10 @@ export class PackagePricingService {
 
   static async create(pricing: Omit<PackagePricing, 'id' | 'created_at' | 'updated_at'>): Promise<PackagePricing> {
     try {
-      // Validate price
       if (!pricing.price || pricing.price <= 0) {
         throw new Error('Price must be greater than 0');
       }
 
-      // Validate relations if provided
       if (pricing.benefit_id) {
         await this.validateBenefitExists(pricing.benefit_id);
       }
@@ -144,12 +135,10 @@ export class PackagePricingService {
     pricing: Partial<PackagePricing>
   ): Promise<PackagePricing> {
     try {
-      // Validate price if provided
       if (pricing.price !== undefined && pricing.price <= 0) {
         throw new Error('Price must be greater than 0');
       }
 
-      // Validate relations if provided
       if (pricing.benefit_id) {
         await this.validateBenefitExists(pricing.benefit_id);
       }
@@ -193,7 +182,6 @@ export class PackagePricingService {
     pricings: Omit<PackagePricing, 'id' | 'created_at' | 'updated_at'>[]
   ): Promise<PackagePricing[]> {
     try {
-      // Validate all prices and relations
       for (const pricing of pricings) {
         if (!pricing.price || pricing.price <= 0) {
           throw new Error('All prices must be greater than 0');
@@ -230,12 +218,10 @@ export class PackagePricingService {
   ): Promise<PackagePricing[]> {
     try {
       const updatePromises = updates.map(async ({ id, data }) => {
-        // Validate price if provided
         if (data.price !== undefined && data.price <= 0) {
           throw new Error(`Price must be greater than 0 for id: ${id}`);
         }
 
-        // Validate relations if provided
         if (data.benefit_id) {
           await this.validateBenefitExists(data.benefit_id);
         }
@@ -307,7 +293,6 @@ export class PackagePricingService {
     return `${months} ${months === 1 ? 'month' : 'months'}`;
   }
 
-  // Helper methods untuk mengambil relasi
   private static async getBenefits(id: number) {
     const { data } = await supabase
       .from('package_benefits')
@@ -326,7 +311,6 @@ export class PackagePricingService {
     return data;
   }
 
-  // Helper methods untuk mengambil relasi
   private static async getBenefitById(id: number) {
     const { data } = await supabase
       .from('package_benefits')

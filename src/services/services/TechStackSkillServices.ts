@@ -93,7 +93,6 @@ export class TechStackSkillService {
 
   static async delete(id: number): Promise<void> {
     try {
-      // Check if skill is being used in tech_stacks
       const { count: techStackCount } = await supabase
         .from('tech_stacks')
         .select('*', { count: 'exact' })

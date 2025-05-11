@@ -1,61 +1,54 @@
-import { createClient } from "@/src/utils/supabase/client";
-import { PromiseItem } from "@/src/models/ServiceModels";
+'use server';
+
+import { createClient } from '@/src/utils/supabase/client';
+import { PromiseItem } from '@/src/models/ServiceModels';
+import { saveFile, deleteFile } from '@/src/utils/server/FileStorage';  
 
 const supabase = createClient();
 
 export class PromiseItemService {
-  private static TABLE_NAME = 'promise_items';
-  private static STORAGE_BUCKET = 'promise-icons';
-  private static MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+  private static TABLE = 'promise_items';
+  private static FOLDER = 'promise-icons';        
+  private static MAX_SIZE = 5 * 1024 * 1024;       
 
+  /* ───────────── list ───────────── */
   static async getAll(params?: {
     search?: string;
     sort?: 'created_at';
     order?: 'asc' | 'desc';
   }): Promise<PromiseItem[]> {
     try {
-      let query = supabase
-        .from(this.TABLE_NAME)
-        .select('*');
+      let q = supabase.from(this.TABLE).select('*');
 
-      if (params?.search) {
-        query = query.or(`
-          title->en.ilike.%${params.search}%,
-          title->id.ilike.%${params.search}%,
-          subtitle->en.ilike.%${params.search}%,
-          subtitle->id.ilike.%${params.search}%
-        `);
-      }
+      if (params?.search)
+        q = q.or(
+          `title->en.ilike.%${params.search}%,
+           title->id.ilike.%${params.search}%,
+           subtitle->en.ilike.%${params.search}%,
+           subtitle->id.ilike.%${params.search}%`
+        );
 
-      if (params?.sort) {
-        query = query.order(params.sort, { ascending: params.order === 'asc' });
-      } else {
-        query = query.order('created_at', { ascending: false });
-      }
+      q = q.order(params?.sort ?? 'created_at', {
+        ascending: params?.order === 'asc',
+      });
 
-      const { data, error } = await query;
+      const { data, error } = await q;
       if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Error fetching promise items:', error);
-      throw error;
+      return data ?? [];
+    } catch (err) {
+      console.error('Error fetching promise items:', err);
+      throw err;
     }
   }
 
   static async getById(id: number): Promise<PromiseItem | null> {
-    try {
-      const { data, error } = await supabase
-        .from(this.TABLE_NAME)
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Error fetching promise item:', error);
-      throw error;
-    }
+    const { data, error } = await supabase
+      .from(this.TABLE)
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error) throw error;
+    return data;
   }
 
   static async create(
@@ -63,29 +56,25 @@ export class PromiseItemService {
     iconFile?: File
   ): Promise<PromiseItem> {
     try {
-      const promiseData = { ...promise };
+      const payload: any = { ...promise };
 
       if (iconFile) {
-        promiseData.icon = await this.uploadIcon(iconFile);
+        payload.icon = await this.uploadIcon(iconFile);
       } else if (promise.icon && !this.isValidIconClass(promise.icon)) {
         throw new Error('Invalid icon format');
       }
 
+      const now = new Date().toISOString();
       const { data, error } = await supabase
-        .from(this.TABLE_NAME)
-        .insert({
-          ...promiseData,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
+        .from(this.TABLE)
+        .insert({ ...payload, created_at: now, updated_at: now })
         .select()
         .single();
-
       if (error) throw error;
       return data;
-    } catch (error) {
-      console.error('Error creating promise item:', error);
-      throw error;
+    } catch (err) {
+      console.error('Error creating promise item:', err);
+      throw err;
     }
   }
 
@@ -95,93 +84,60 @@ export class PromiseItemService {
     newIconFile?: File
   ): Promise<PromiseItem> {
     try {
-      const updateData: Partial<PromiseItem> = {
-        ...promise,
-        updated_at: new Date().toISOString()
-      };
+      const update: any = { ...promise, updated_at: new Date().toISOString() };
 
       if (newIconFile) {
-        const oldPromise = await this.getById(id);
-        if (oldPromise?.icon && !this.isValidIconClass(oldPromise.icon)) {
-          await this.deleteIcon(oldPromise.icon);
-        }
-        updateData.icon = await this.uploadIcon(newIconFile);
+        const old = await this.getById(id);
+        if (old?.icon && !this.isValidIconClass(old.icon))
+          await this.deleteIcon(old.icon);
+        update.icon = await this.uploadIcon(newIconFile);
       } else if (promise.icon && !this.isValidIconClass(promise.icon)) {
         throw new Error('Invalid icon format');
       }
 
       const { data, error } = await supabase
-        .from(this.TABLE_NAME)
-        .update(updateData)
+        .from(this.TABLE)
+        .update(update)
         .eq('id', id)
         .select()
         .single();
-
       if (error) throw error;
       return data;
-    } catch (error) {
-      console.error('Error updating promise item:', error);
-      throw error;
+    } catch (err) {
+      console.error('Error updating promise item:', err);
+      throw err;
     }
   }
 
-  static async delete(id: number): Promise<void> {
+  static async delete(id: number) {
     try {
-      const promise = await this.getById(id);
-      if (!promise) return;
+      const item = await this.getById(id);
+      if (item?.icon && !this.isValidIconClass(item.icon))
+        await this.deleteIcon(item.icon);
 
-      if (promise.icon && !this.isValidIconClass(promise.icon)) {
-        await this.deleteIcon(promise.icon);
-      }
-
-      const { error } = await supabase
-        .from(this.TABLE_NAME)
-        .delete()
-        .eq('id', id);
-
+      const { error } = await supabase.from(this.TABLE).delete().eq('id', id);
       if (error) throw error;
-    } catch (error) {
-      console.error('Error deleting promise item:', error);
-      throw error;
+    } catch (err) {
+      console.error('Error deleting promise item:', err);
+      throw err;
     }
   }
 
-  private static isValidIconClass(icon: string): boolean {
+  private static isValidIconClass(icon: string) {
     return /^(fa|bi|material-icons|icon-)/.test(icon);
   }
 
-  private static async uploadIcon(file: File): Promise<string> {
-    if (file.size > this.MAX_FILE_SIZE) {
-      throw new Error('File size exceeds 5MB limit');
-    }
-
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}.${fileExt}`;
-    const filePath = `${this.STORAGE_BUCKET}/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('public')
-      .upload(filePath, file);
-
-    if (uploadError) throw uploadError;
-    return filePath;
+  private static async uploadIcon(file: File) {
+    if (file.size > this.MAX_SIZE) throw new Error('File size exceeds 5 MB');
+    return saveFile(file, { folder: this.FOLDER });
   }
 
-  private static async deleteIcon(path: string): Promise<void> {
-    const { error } = await supabase.storage
-      .from('public')
-      .remove([path]);
-
-    if (error) throw error;
+  private static async deleteIcon(path: string) {
+    await deleteFile(path);
   }
 
-  static getIconUrl(path: string): string {
+  static getIconUrl(path: string) {
     if (this.isValidIconClass(path)) return path;
-    
-    const { data } = supabase.storage
-      .from('public')
-      .getPublicUrl(path);
-    
-    return data.publicUrl;
+    return /^https?:\/\//i.test(path) ? path : path.startsWith('/') ? path : `/${path}`;
   }
 }
