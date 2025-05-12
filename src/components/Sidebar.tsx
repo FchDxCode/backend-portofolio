@@ -132,9 +132,9 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           href: "/about-hero" 
         },
         { 
-          title: "Projects", 
+          title: "Home Hero", 
           icon: <FolderKanban className="w-4 h-4" />, 
-          href: "/dashboard/projects" 
+          href: "/home-hero" 
         },
         { 
           title: "Messages", 

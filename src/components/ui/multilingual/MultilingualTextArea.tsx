@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -31,6 +31,8 @@ export function MultilingualTextarea({
   const languageName = language === 'en' ? 'English' : 'Indonesian';
   const placeholderText = placeholder || `Enter ${label.toLowerCase()} in ${languageName}`;
   
+  console.log(`MultilingualTextarea - value untuk ${label} (${language}):`, value);
+  
   const editor = useRichText ? useEditor({
     extensions: [
       StarterKit,
@@ -39,13 +41,18 @@ export function MultilingualTextarea({
         placeholder: placeholderText,
       }),
     ],
-    content: value,
+    content: value || '',
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
   }) : null;
 
-
+  useEffect(() => {
+    if (editor && value !== undefined && editor.getHTML() !== value) {
+      console.log('Updating editor content:', value);
+      editor.commands.setContent(value || '');
+    }
+  }, [editor, value]);
 
   if (useRichText && !editor) {
     return <div>Loading editor...</div>;
@@ -109,7 +116,7 @@ export function MultilingualTextarea({
         </div>
       ) : (
         <textarea
-          value={value}
+          value={value || ''}
           onChange={(e) => onChange(e)}
           rows={rows}
           className="w-full rounded-md border border-input bg-background p-3 text-sm focus:border-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-all duration-200"

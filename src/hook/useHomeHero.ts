@@ -7,7 +7,6 @@ export const useHomeHero = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  // Fetch hero data
   const fetchHero = async () => {
     try {
       setLoading(true);
@@ -21,7 +20,6 @@ export const useHomeHero = () => {
     }
   };
 
-  // Save hero data
   const saveHero = async (data: Partial<HomeHero>) => {
     try {
       setLoading(true);
@@ -37,7 +35,6 @@ export const useHomeHero = () => {
     }
   };
 
-  // Update image
   const updateImage = async (id: number, file: File) => {
     try {
       setLoading(true);
@@ -53,7 +50,6 @@ export const useHomeHero = () => {
     }
   };
 
-  // Load initial data
   useEffect(() => {
     fetchHero();
   }, []);

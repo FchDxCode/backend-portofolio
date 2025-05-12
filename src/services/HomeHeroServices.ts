@@ -1,5 +1,3 @@
-'use server';
-
 import { createClient } from '@/src/utils/supabase/client';
 import { HomeHero } from '@/src/models/SingletonModels';
 import { saveImage, deleteImage } from '@/src/utils/server/FileStorage';
