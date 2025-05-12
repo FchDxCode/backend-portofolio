@@ -15,10 +15,12 @@ import { LanguageSwitcher } from '@/src/components/ui/multilingual/LanguageSwitc
 import { MultilingualInput } from '@/src/components/ui/multilingual/MultilingualInput';
 import { MultilingualTextarea } from '@/src/components/ui/multilingual/MultilingualTextArea';
 import { useAlert } from '@/src/components/ui/alert/AlertProvider';
-import { PageLoader, LoadingOverlay, Loader } from '@/src/components/ui/Loader';
+import { PageLoader } from '@/src/components/ui/Loader';
+import { MinLoadingTime } from '@/src/utils/client/MinLoadingTime';
 
 export default function AboutHero() {
-    const { about, loading, saveAbout, updateImage } = useAbout();
+    const { about, loading: dataLoading, saveAbout, updateImage } = useAbout();
+    const loading = MinLoadingTime(dataLoading, 3000);
     const [title, setTitle] = useState<Record<string, any>>({});
     const [subtitle, setSubtitle] = useState<Record<string, any>>({});
     const [description, setDescription] = useState<Record<string, any>>({});

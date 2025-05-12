@@ -16,9 +16,11 @@ import { MultilingualInput } from '@/src/components/ui/multilingual/Multilingual
 import { MultilingualTextarea } from '@/src/components/ui/multilingual/MultilingualTextArea';
 import { useAlert } from '@/src/components/ui/alert/AlertProvider';
 import { PageLoader } from '@/src/components/ui/Loader';
+import { MinLoadingTime } from '@/src/utils/client/MinLoadingTime';
 
 export default function HomeHero() {
-    const { hero, loading, saveHero, updateImage } = useHomeHero();
+    const { hero, loading: dataLoading, saveHero, updateImage } = useHomeHero();
+    const loading = MinLoadingTime(dataLoading, 3000);
     const [title, setTitle] = useState<Record<string, any>>({});
     const [subtitle, setSubtitle] = useState<Record<string, any>>({});
     const [description, setDescription] = useState<Record<string, any>>({});

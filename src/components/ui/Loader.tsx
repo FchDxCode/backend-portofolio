@@ -117,7 +117,7 @@ export function CustomLoader({
 }
 
 // Page loader version
-export function PageCustomLoader({ text = "Memuat data..." }: { text?: string }) {
+export function PageLoader({ text = "Memuat data..." }: { text?: string }) {
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
       <CustomLoader size="lg" text={text} />
