@@ -10,8 +10,9 @@ import TrafficSourcesAnalysis from '@/src/components/analytics/TrafficSourcesAna
 import VisitorBehavior from '@/src/components/analytics/VisitorBehavior';
 import ComparisonMetrics from '@/src/components/analytics/ComparisonMetrics';
 import FilterPanel from '@/src/components/analytics/FilterPanel';
-import AnalyticsLoading from '@/src/components/analytics/AnalyticsLoading';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/src/components/ui/tabs";
+import { CustomLoader, PageLoader, ButtonLoader } from "@/src/components/ui/Loader";
+import { MinLoadingTime } from '@/src/utils/client/MinLoadingTime';
 
 export default function AnalyticsPage() {
     const [activeTab, setActiveTab] = useState<string>("overview");
@@ -24,6 +25,14 @@ export default function AnalyticsPage() {
         compareWithPrevious: true,
         limit: 10
     });
+    
+    // Gunakan MinLoadingTime untuk memastikan loader tampil minimal 2 detik
+    const isLoading = MinLoadingTime(analytics.loading, 2000);
+
+    // Jika sedang loading, tampilkan loader dengan animasi custom
+    if (isLoading) {
+        return <PageLoader text="Memuat data analitik..." />;
+    }
 
     return (
         <div className="space-y-6">
@@ -39,10 +48,15 @@ export default function AnalyticsPage() {
                 <div className="flex items-center gap-3 self-start">
                     <button
                         onClick={() => analytics.refreshStats()}
-                        className="inline-flex items-center justify-center rounded-md bg-primary/10 text-primary hover:bg-primary/20 px-4 py-2 text-sm font-medium transition-colors"
+                        className="inline-flex items-center justify-center rounded-md bg-primary/10 text-primary hover:bg-primary/20 px-4 py-2 text-sm font-medium transition-colors gap-2"
                         disabled={analytics.loading}
                     >
-                        {analytics.loading ? 'Refreshing...' : 'Refresh Data'}
+                        {analytics.loading ? (
+                            <>
+                                <ButtonLoader />
+                                <span>Refreshing...</span>
+                            </>
+                        ) : 'Refresh Data'}
                     </button>
                     
                     <button className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1">
@@ -59,49 +73,43 @@ export default function AnalyticsPage() {
                 className="sticky top-0 z-10 pt-3 pb-3 bg-background/95 backdrop-blur-sm" 
             />
             
-            {analytics.loading && <AnalyticsLoading />}
+            {/* Overview Stats */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <VisitorOverview 
+                    analytics={analytics} 
+                    className="lg:col-span-2"
+                />
+                <ComparisonMetrics 
+                    analytics={analytics} 
+                    className="lg:col-span-1"
+                />
+            </div>
             
-            {!analytics.loading && (
-                <>
-                    {/* Overview Stats */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <VisitorOverview 
-                            analytics={analytics} 
-                            className="lg:col-span-2"
-                        />
-                        <ComparisonMetrics 
-                            analytics={analytics} 
-                            className="lg:col-span-1"
-                        />
-                    </div>
-                    
-                    {/* Tabbed Content */}
-                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                        <TabsList className="grid grid-cols-4 mb-6">
-                            <TabsTrigger value="overview">Visitor Trends</TabsTrigger>
-                            <TabsTrigger value="pages">Page Performance</TabsTrigger>
-                            <TabsTrigger value="sources">Traffic Sources</TabsTrigger>
-                            <TabsTrigger value="behavior">User Behavior</TabsTrigger>
-                        </TabsList>
-                        
-                        <TabsContent value="overview">
-                            <VisitorTrends analytics={analytics} />
-                        </TabsContent>
-                        
-                        <TabsContent value="pages">
-                            <PagePerformance analytics={analytics} />
-                        </TabsContent>
-                        
-                        <TabsContent value="sources">
-                            <TrafficSourcesAnalysis analytics={analytics} />
-                        </TabsContent>
-                        
-                        <TabsContent value="behavior">
-                            <VisitorBehavior analytics={analytics} />
-                        </TabsContent>
-                    </Tabs>
-                </>
-            )}
+            {/* Tabbed Content */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid grid-cols-4 mb-6">
+                    <TabsTrigger value="overview">Visitor Trends</TabsTrigger>
+                    <TabsTrigger value="pages">Page Performance</TabsTrigger>
+                    <TabsTrigger value="sources">Traffic Sources</TabsTrigger>
+                    <TabsTrigger value="behavior">User Behavior</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="overview">
+                    <VisitorTrends analytics={analytics} />
+                </TabsContent>
+                
+                <TabsContent value="pages">
+                    <PagePerformance analytics={analytics} />
+                </TabsContent>
+                
+                <TabsContent value="sources">
+                    <TrafficSourcesAnalysis analytics={analytics} />
+                </TabsContent>
+                
+                <TabsContent value="behavior">
+                    <VisitorBehavior analytics={analytics} />
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }

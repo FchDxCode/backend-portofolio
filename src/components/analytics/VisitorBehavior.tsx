@@ -28,7 +28,7 @@ import {
     Filler,
     Title
 } from 'chart.js';
-import AnalyticsLoading from '@/src/components/analytics/AnalyticsLoading';
+import { CardLoader } from '@/src/components/ui/Loader';
 
 // Register ChartJS components
 ChartJS.register(
@@ -54,7 +54,7 @@ export default function VisitorBehavior({ analytics, className = "" }: VisitorBe
     const [deviceView, setDeviceView] = useState<'devices' | 'browsers'>('devices');
     
     if (analytics.loading) {
-        return <div className={`rounded-xl border bg-card p-6 ${className}`}><AnalyticsLoading /></div>;
+        return <div className={`rounded-xl border bg-card p-6 ${className}`}><CardLoader /></div>;
     }
     
     // Process device data from analytics - menggunakan visitor data yang sudah ada

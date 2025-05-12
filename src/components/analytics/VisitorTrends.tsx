@@ -15,7 +15,7 @@ import {
     Filler 
 } from 'chart.js';
 import { useState } from 'react';
-import AnalyticsLoading from '@/src/components/analytics/AnalyticsLoading';
+import { CardLoader } from '@/src/components/ui/Loader';
 
 // Register Chart.js components
 ChartJS.register(
@@ -40,7 +40,7 @@ export default function VisitorTrends({ analytics, className = "" }: VisitorTren
     const [chartType, setChartType] = useState<'visitors' | 'pageViews'>('visitors');
     
     if (analytics.loading) {
-        return <div className={`rounded-xl border bg-card p-6 ${className}`}><AnalyticsLoading /></div>;
+        return <div className={`rounded-xl border bg-card p-6 ${className}`}><CardLoader /></div>;
     }
     
     // Process analytics data for chart display

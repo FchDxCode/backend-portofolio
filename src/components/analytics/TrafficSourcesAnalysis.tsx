@@ -5,8 +5,8 @@ import { Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { useTheme } from 'next-themes';
 import { ArrowUp, ArrowDown, Globe, RefreshCw } from 'lucide-react';
-import AnalyticsLoading from '@/src/components/analytics/AnalyticsLoading';
 import React from 'react';
+import { CardLoader } from '@/src/components/ui/Loader';
 
 // Register ChartJS components
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -21,7 +21,7 @@ export default function TrafficSourcesAnalysis({ analytics, className = "" }: Tr
     const isDark = theme === 'dark';
     
     if (analytics.loading) {
-        return <div className={`rounded-xl border bg-card p-6 ${className}`}><AnalyticsLoading /></div>;
+        return <div className={`rounded-xl border bg-card p-6 ${className}`}><CardLoader /></div>;
     }
     
     // Use actual data from the hook or empty array if not available

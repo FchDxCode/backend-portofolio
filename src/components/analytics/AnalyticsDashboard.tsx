@@ -2,7 +2,7 @@
 
 import { useVisitorAnalytics } from '@/src/hook/useVisitor';
 import { BarChart3, TrendingUp, Users, Clock } from 'lucide-react';
-import AnalyticsLoading from '@/src/components/analytics/AnalyticsLoading';
+import { CardLoader } from '@/src/components/ui/Loader';
 
 interface AnalyticsDashboardProps {
     analytics: ReturnType<typeof useVisitorAnalytics>;
@@ -10,7 +10,7 @@ interface AnalyticsDashboardProps {
 
 export default function AnalyticsDashboard({ analytics }: AnalyticsDashboardProps) {
     if (analytics.loading) {
-        return <div className="w-full p-12"><AnalyticsLoading /></div>;
+        return <div className="w-full p-12"><CardLoader /></div>;
     }
     
     const highlights = [

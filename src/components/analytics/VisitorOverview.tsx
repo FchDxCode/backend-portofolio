@@ -3,7 +3,7 @@
 import { Users, Clock, MousePointerClick, ArrowRight, TrendingUp, TrendingDown } from 'lucide-react';
 import { useVisitorAnalytics } from '@/src/hook/useVisitor';
 import { useTheme } from 'next-themes';
-import AnalyticsLoading from '@/src/components/analytics/AnalyticsLoading';
+import { CardLoader } from '@/src/components/ui/Loader';
 
 interface VisitorOverviewProps {
     analytics: ReturnType<typeof useVisitorAnalytics>;
@@ -15,7 +15,7 @@ export default function VisitorOverview({ analytics, className = "" }: VisitorOv
     const isDark = theme === 'dark';
     
     if (analytics.loading) {
-        return <div className={`rounded-xl border bg-card p-6 ${className}`}><AnalyticsLoading /></div>;
+        return <div className={`rounded-xl border bg-card p-6 ${className}`}><CardLoader /></div>;
     }
     
     // Calculate average duration from visitor stats

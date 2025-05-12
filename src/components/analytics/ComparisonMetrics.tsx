@@ -2,7 +2,7 @@
 
 import { useVisitorAnalytics } from '@/src/hook/useVisitor';
 import { BarChart3, TrendingUp, TrendingDown } from 'lucide-react';
-import AnalyticsLoading from '@/src/components/analytics/AnalyticsLoading';
+import { CardLoader } from '@/src/components/ui/Loader';
 
 interface ComparisonMetricsProps {
     analytics: ReturnType<typeof useVisitorAnalytics>;
@@ -13,7 +13,7 @@ export default function ComparisonMetrics({ analytics, className = "" }: Compari
     const comparison = analytics.comparison;
     
     if (analytics.loading) {
-        return <div className={`rounded-xl border bg-card p-6 ${className}`}><AnalyticsLoading /></div>;
+        return <div className={`rounded-xl border bg-card p-6 ${className}`}><CardLoader /></div>;
     }
     
     // If no comparison data available, show empty state

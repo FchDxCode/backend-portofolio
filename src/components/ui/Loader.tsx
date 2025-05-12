@@ -124,3 +124,77 @@ export function PageLoader({ text = "Memuat data..." }: { text?: string }) {
     </div>
   );
 }
+
+// Button Loader - untuk tombol
+export function ButtonLoader({ 
+  className,
+  color = "border-current"
+}: {
+  className?: string;
+  color?: string;
+}) {
+  return (
+    <CustomLoader 
+      size="sm" 
+      color={color}
+      className={cn("w-4 h-4", className)}
+    />
+  );
+}
+
+// Card Loader - untuk loading di dalam card
+export function CardLoader({ 
+  text,
+  className
+}: { 
+  text?: string;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex flex-col items-center justify-center p-6", className)}>
+      <CustomLoader size="md" />
+      {text && <p className="mt-3 text-sm text-muted-foreground">{text}</p>}
+    </div>
+  );
+}
+
+// Skeleton Loader - untuk placeholder content
+export function SkeletonLoader({
+  height = "h-8",
+  width = "w-full",
+  className
+}: {
+  height?: string;
+  width?: string;
+  className?: string;
+}) {
+  return (
+    <div 
+      className={cn(
+        "animate-pulse bg-muted rounded-md", 
+        height, 
+        width, 
+        className
+      )} 
+    />
+  );
+}
+
+// Inline Loader - untuk text rows
+export function InlineLoader({
+  className,
+  color = "border-primary"
+}: {
+  className?: string;
+  color?: string;
+}) {
+  return (
+    <div className={cn("inline-flex items-center", className)}>
+      <div className="relative w-4 h-4 mr-2">
+        <div className="absolute w-4 h-4 rounded-full animate-ping bg-primary/30" />
+        <div className={cn("absolute w-3 h-3 rounded-full", color)} />
+      </div>
+      <span>Loading...</span>
+    </div>
+  );
+}

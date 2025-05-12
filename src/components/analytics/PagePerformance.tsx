@@ -13,7 +13,7 @@ import {
     Tooltip, 
     Legend 
 } from 'chart.js';
-import AnalyticsLoading from '@/src/components/analytics/AnalyticsLoading';
+import { CardLoader } from '@/src/components/ui/Loader';
 
 // Register Chart.js components
 ChartJS.register(
@@ -35,7 +35,7 @@ export default function PagePerformance({ analytics, className = "" }: PagePerfo
     const isDark = theme === 'dark';
     
     if (analytics.loading) {
-        return <div className="grid grid-cols-1 lg:grid-cols-3 gap-6"><AnalyticsLoading /></div>;
+        return <div className="grid grid-cols-1 lg:grid-cols-3 gap-6"><CardLoader /></div>;
     }
     
     // Use actual page data or empty array
