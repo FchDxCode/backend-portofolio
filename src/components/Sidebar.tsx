@@ -142,9 +142,9 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           href: "/hire-me" 
         },
         { 
-          title: "Messages", 
+          title: "Call To Action", 
           icon: <MessageSquare className="w-4 h-4" />, 
-          href: "/dashboard/messages", 
+          href: "/cta", 
           badge: "3",
           badgeColor: "bg-sky-500"
         },
