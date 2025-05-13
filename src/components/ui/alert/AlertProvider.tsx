@@ -24,7 +24,11 @@ export function AlertProvider({ children }: { children: ReactNode }) {
 
   const showAlert = (message: string, type: AlertType = 'info') => {
     const id = Date.now().toString();
-    setAlerts(prev => [...prev, { id, message, type }]);
+    // Batasi jumlah alert yang ditampilkan (maksimal 3)
+    setAlerts(prev => {
+      const newAlerts = [...prev, { id, message, type }];
+      return newAlerts.slice(-3);
+    });
     
     setTimeout(() => {
       setAlerts(prev => prev.filter(alert => alert.id !== id));
@@ -42,7 +46,7 @@ export function AlertProvider({ children }: { children: ReactNode }) {
   return (
     <AlertContext.Provider value={contextValue}>
       {children}
-      <div className="fixed inset-x-0 bottom-0 z-50 flex flex-col items-center justify-end p-4 space-y-2 pointer-events-none">
+      <div className="fixed top-0 left-0 right-0 z-50 flex flex-col items-center p-4 space-y-4 pointer-events-none">
         {alerts.map((alert) => (
           <Alert
             key={alert.id}

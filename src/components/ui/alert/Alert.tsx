@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, AlertCircle, XCircle, Info, X } from 'lucide-react';
-import { cn } from '@/src/lib/utils';
 
 type AlertType = 'success' | 'error' | 'warning' | 'info';
 
@@ -17,19 +16,24 @@ interface AlertProps {
 export function Alert({ 
   message, 
   type = 'info', 
-  duration = 3000, 
+  duration = 2000, 
   onClose,
   isOpen 
 }: AlertProps) {
   const [isVisible, setIsVisible] = useState(isOpen);
+  const [isLeaving, setIsLeaving] = useState(false);
   
   useEffect(() => {
     setIsVisible(isOpen);
+    setIsLeaving(false);
     
     if (isOpen && duration > 0) {
       const timer = setTimeout(() => {
-        setIsVisible(false);
-        if (onClose) onClose();
+        setIsLeaving(true);
+        setTimeout(() => {
+          setIsVisible(false);
+          if (onClose) onClose();
+        }, 300);
       }, duration);
       
       return () => clearTimeout(timer);
@@ -46,34 +50,103 @@ export function Alert({
   };
   
   const styles = {
-    success: "bg-green-50 text-green-800 border-green-100 dark:bg-green-900/20 dark:text-green-300 dark:border-green-900/30",
-    error: "bg-red-50 text-red-800 border-red-100 dark:bg-red-900/20 dark:text-red-300 dark:border-red-900/30",
-    warning: "bg-amber-50 text-amber-800 border-amber-100 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-900/30",
-    info: "bg-blue-50 text-blue-800 border-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-900/30"
+    success: `
+      bg-green-50 text-green-800 
+      dark:bg-green-900/20 dark:text-green-300
+      border-t-4 border-green-500
+      hover:bg-green-100 dark:hover:bg-green-900/30
+    `,
+    error: `
+      bg-red-50 text-red-800 
+      dark:bg-red-900/20 dark:text-red-300
+      border-t-4 border-red-500
+      hover:bg-red-100 dark:hover:bg-red-900/30
+    `,
+    warning: `
+      bg-amber-50 text-amber-800 
+      dark:bg-amber-900/20 dark:text-amber-300
+      border-t-4 border-amber-500
+      hover:bg-amber-100 dark:hover:bg-amber-900/30
+    `,
+    info: `
+      bg-blue-50 text-blue-800 
+      dark:bg-blue-900/20 dark:text-blue-300
+      border-t-4 border-blue-500
+      hover:bg-blue-100 dark:hover:bg-blue-900/30
+    `
+  };
+
+  const progressBarColors = {
+    success: "bg-green-500",
+    error: "bg-red-500",
+    warning: "bg-amber-500",
+    info: "bg-blue-500"
   };
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 flex justify-center items-end p-4 pointer-events-none">
+    <div 
+      className={`
+        fixed left-1/2 top-4 z-50
+        -translate-x-1/2
+        w-full max-w-md
+        transform transition-all duration-300 ease-in-out
+        ${isLeaving ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100'}
+      `}
+    >
       <div
-        className={cn(
-          "pointer-events-auto flex w-full max-w-md rounded-lg border p-4 shadow-md items-start",
-          styles[type]
-        )}
+        className={`
+          relative overflow-hidden
+          flex w-full rounded-lg shadow-lg
+          ${styles[type]}
+          transition-all duration-200
+          hover:shadow-xl
+          cursor-pointer
+          mx-auto
+        `}
         role="alert"
-      >
-        <div className="mr-3 flex-shrink-0">{icons[type]}</div>
-        <div className="flex-1 mr-2">
-          <p className="text-sm font-medium">{message}</p>
-        </div>
-        <button
-          type="button"
-          className="ml-auto -mx-1.5 -my-1.5 rounded-lg focus:ring-2 focus:ring-gray-300 p-1.5 inline-flex items-center justify-center h-8 w-8 dark:focus:ring-gray-600"
-          onClick={() => {
+        onClick={() => {
+          setIsLeaving(true);
+          setTimeout(() => {
             setIsVisible(false);
             if (onClose) onClose();
+          }, 300);
+        }}
+      >
+        {/* Progress Bar */}
+        <div 
+          className={`
+            absolute bottom-0 left-0 h-1 w-full
+            ${progressBarColors[type]}
+          `}
+          style={{
+            animation: `shrinkWidth ${duration}ms linear forwards`
+          }}
+        />
+
+        <div className="flex items-center justify-center flex-shrink-0 w-12 p-4">
+          <div className="w-6 h-6">{icons[type]}</div>
+        </div>
+
+        <div className="flex-1 p-4 pr-2">
+          <p className="text-sm font-medium leading-5 text-center">{message}</p>
+        </div>
+
+        <button
+          type="button"
+          className="absolute top-2 right-2 p-1.5 rounded-full
+            hover:bg-black/5 dark:hover:bg-white/5
+            focus:outline-none focus:ring-2 focus:ring-offset-2
+            transition-colors duration-200"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsLeaving(true);
+            setTimeout(() => {
+              setIsVisible(false);
+              if (onClose) onClose();
+            }, 300);
           }}
         >
-          <span className="sr-only">Close</span>
+          <span className="sr-only">Tutup</span>
           <X className="h-4 w-4" />
         </button>
       </div>
@@ -81,41 +154,22 @@ export function Alert({
   );
 }
 
+// Sisanya tetap sama seperti sebelumnya
 export function useAlert() {
-  const [alerts, setAlerts] = useState<{
-    id: string;
-    message: string;
-    type: AlertType;
-    isOpen: boolean;
-  }[]>([]);
+  // ... kode useAlert tetap sama
+}
 
-  const showAlert = (message: string, type: AlertType = 'info') => {
-    const id = Date.now().toString();
-    setAlerts(prev => [...prev, { id, message, type, isOpen: true }]);
-    return id;
-  };
+// Tambahkan CSS global
+const styles = `
+@keyframes shrinkWidth {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+`;
 
-  const closeAlert = (id: string) => {
-    setAlerts(prev => prev.filter(alert => alert.id !== id));
-  };
-
-  const alertComponents = alerts.map(alert => (
-    <Alert
-      key={alert.id}
-      message={alert.message}
-      type={alert.type}
-      isOpen={alert.isOpen}
-      onClose={() => closeAlert(alert.id)}
-    />
-  ));
-
-  return {
-    showAlert,
-    closeAlert,
-    success: (message: string) => showAlert(message, 'success'),
-    error: (message: string) => showAlert(message, 'error'),
-    warning: (message: string) => showAlert(message, 'warning'),
-    info: (message: string) => showAlert(message, 'info'),
-    alertComponents
-  };
+// Inject CSS ke dalam head
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement("style");
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
 }
