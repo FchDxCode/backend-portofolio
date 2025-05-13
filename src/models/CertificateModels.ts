@@ -2,7 +2,7 @@ export interface Certificate {
     id: number;
     title?: Record<string, any>;
     description?: Record<string, any>;
-    skill_id?: number;
+    skill_id?: number; // skill id related to certificate
     pdf?: string;
     image?: string;
     issued_by?: string;

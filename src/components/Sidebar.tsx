@@ -107,9 +107,9 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           ]
         },
         { 
-          title: "Products", 
+          title: "Certificate", 
           icon: <Package className="w-4 h-4" />, 
-          href: "/dashboard/products"
+          href: "/certificate"
         },
         { 
           title: "Invoices", 

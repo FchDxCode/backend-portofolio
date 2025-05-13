@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import { FileIcon, Folder } from "lucide-react";
+import { useAlert } from "@/src/components/ui/alert/AlertProvider";
 
 interface DocumentUploadProps {
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -20,6 +21,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  const { error } = useAlert();
 
   useEffect(() => {
     if (currentUrl) {
@@ -37,7 +39,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
     if (e.target.files && e.target.files[0]) {
       // Check file size
       if (e.target.files[0].size > maxSize * 1024 * 1024) {
-        alert(`File terlalu besar. Maksimal ${maxSize}MB.`);
+        error(`File terlalu besar. Maksimal ${maxSize}MB.`);
         e.target.value = '';
         return;
       }

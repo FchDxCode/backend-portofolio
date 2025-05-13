@@ -1,5 +1,3 @@
-'use server';
-
 import { createClient } from '@/src/utils/supabase/client';
 import { Certificate } from '@/src/models/CertificateModels';
 import {
