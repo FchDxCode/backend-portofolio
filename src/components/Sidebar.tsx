@@ -156,9 +156,9 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           badgeColor: "bg-amber-500"
         },
         { 
-          title: "Payments", 
+          title: "Contact", 
           icon: <CreditCard className="w-4 h-4" />, 
-          href: "/dashboard/payments" 
+          href: "/contact" 
         },
       ]
     },
