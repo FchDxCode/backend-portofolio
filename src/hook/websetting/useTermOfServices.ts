@@ -1,40 +1,57 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { TermsOfServiceService } from '@/src/services/websetting/TermOfServices';
 import { TermsOfService } from '@/src/models/WebSettingModels';
-import { PolicyService } from '@/src/services/websetting/PolicyServices';
 
-export const useTermsOfService = () => {
+interface TermsOfServiceHook {
+  termsOfService: TermsOfService | null;
+  loading: boolean;
+  error: string | null;
+  saveTermsOfService: (terms: Partial<TermsOfService>) => Promise<boolean>;
+  refresh: () => Promise<void>;
+}
+
+/**
+ * Hook untuk mengelola terms of service
+ * @returns {TermsOfServiceHook} Object dengan state dan fungsi untuk mengelola terms of service
+ */
+export const useTermsOfService = (): TermsOfServiceHook => {
   const [termsOfService, setTermsOfService] = useState<TermsOfService | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchTerms = async () => {
-      try {
-        setLoading(true);
-        const data = await PolicyService.getTermsOfService();
-        setTermsOfService(data);
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error('Unknown error'));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTerms();
-  }, []);
-
-  const updateTermsOfService = async (
-    terms: Omit<TermsOfService, 'id' | 'created_at' | 'updated_at'>
-  ) => {
+  const fetchTermsOfService = useCallback(async () => {
     try {
       setLoading(true);
-      const updatedTerms = await PolicyService.upsertTermsOfService(terms);
-      setTermsOfService(updatedTerms);
-      return updatedTerms;
+      setError(null);
+      const data = await TermsOfServiceService.get();
+      setTermsOfService(data);
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
-      throw err;
+      setError('Gagal memuat syarat layanan');
+      console.error('Error in useTermsOfService hook:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTermsOfService();
+  }, [fetchTermsOfService]);
+
+  const saveTermsOfService = async (terms: Partial<TermsOfService>): Promise<boolean> => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await TermsOfServiceService.save(terms);
+      if (result) {
+        setTermsOfService(result);
+        return true;
+      }
+      setError('Gagal menyimpan syarat layanan');
+      return false;
+    } catch (err) {
+      setError('Terjadi kesalahan saat menyimpan syarat layanan');
+      console.error('Error saving terms of service:', err);
+      return false;
     } finally {
       setLoading(false);
     }
@@ -44,6 +61,9 @@ export const useTermsOfService = () => {
     termsOfService,
     loading,
     error,
-    updateTermsOfService
+    saveTermsOfService,
+    refresh: fetchTermsOfService
   };
 };
+
+export default useTermsOfService;

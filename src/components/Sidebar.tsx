@@ -160,6 +160,21 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           icon: <CreditCard className="w-4 h-4" />, 
           href: "/contact" 
         },
+        { 
+          title: "Privacy Policy", 
+          icon: <CreditCard className="w-4 h-4" />, 
+          href: "/privacy-policy" 
+        },
+        { 
+          title: "Term of Services", 
+          icon: <CreditCard className="w-4 h-4" />, 
+          href: "/term-of-services" 
+        },
+        { 
+          title: "Cookie Policy", 
+          icon: <CreditCard className="w-4 h-4" />, 
+          href: "/cookie-policy" 
+        },
       ]
     },
     {
