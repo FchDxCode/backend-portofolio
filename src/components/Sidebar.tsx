@@ -149,9 +149,9 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           badgeColor: "bg-sky-500"
         },
         { 
-          title: "Inbox", 
+          title: "Hero Call Me", 
           icon: <Mail className="w-4 h-4" />, 
-          href: "/dashboard/inbox", 
+          href: "/banner/hero-call-me", 
           badge: "12",
           badgeColor: "bg-amber-500"
         },
