@@ -1,50 +1,115 @@
-import { useState, useEffect } from 'react';
-import { WebSetting } from '@/src/models/WebSettingModels';
+import { useState, useEffect, useCallback } from 'react';
 import { WebSettingService } from '@/src/services/websetting/WebSettingServices';
+import { WebSetting } from '@/src/models/WebSettingModels';
 
-export const useWebSetting = () => {
+interface UseWebSettingResult {
+  webSetting: WebSetting | null;
+  loading: boolean;
+  error: string | null;
+  saveWebSetting: (
+    setting: Partial<WebSetting>,
+    files?: {
+      logo?: File;
+      favicon?: File;
+      cv_id?: File;
+      cv_en?: File;
+      portfolio?: File;
+    }
+  ) => Promise<boolean>;
+  deleteFile: (
+    field: keyof Pick<WebSetting, 'logo' | 'favicon' | 'cv_id' | 'cv_en' | 'portfolio'>
+  ) => Promise<boolean>;
+  refresh: () => Promise<void>;
+}
+
+/**
+ * Hook untuk mengelola pengaturan website
+ * @returns {UseWebSettingResult} Object dengan state dan fungsi untuk mengelola pengaturan website
+ */
+export const useWebSetting = (): UseWebSettingResult => {
   const [webSetting, setWebSetting] = useState<WebSetting | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchSetting = async () => {
-      try {
-        setLoading(true);
-        const data = await WebSettingService.getSetting();
-        setWebSetting(data);
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error('Unknown error'));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSetting();
-  }, []);
-
-  const updateSetting = async (
-    setting: Omit<WebSetting, 'id' | 'created_at' | 'updated_at'>,
-    logoFile?: File,
-    faviconFile?: File,
-    cvFile?: File,
-    portfolioFile?: File
-  ) => {
+  /**
+   * Mengambil data pengaturan website dari server
+   */
+  const fetchWebSetting = useCallback(async () => {
     try {
       setLoading(true);
-      const updatedSetting = await WebSettingService.upsertSetting(
-        setting,
-        logoFile,
-        faviconFile,
-        cvFile,
-        portfolioFile
-      );
-      setWebSetting(updatedSetting);
-      return updatedSetting;
+      setError(null);
+      const data = await WebSettingService.get();
+      setWebSetting(data);
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
-      throw err;
+      setError('Gagal memuat pengaturan website');
+      console.error('Error in useWebSetting hook:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Mengambil data saat komponen dimount
+  useEffect(() => {
+    fetchWebSetting();
+  }, [fetchWebSetting]);
+
+  /**
+   * Menyimpan atau memperbarui pengaturan website
+   * @param {Partial<WebSetting>} setting - Data pengaturan website yang akan disimpan
+   * @param {Record<string, File>} files - File-file yang akan diunggah
+   * @returns {Promise<boolean>} Status keberhasilan operasi
+   */
+  const saveWebSetting = async (
+    setting: Partial<WebSetting>,
+    files?: {
+      logo?: File;
+      favicon?: File;
+      cv_id?: File;
+      cv_en?: File;
+      portfolio?: File;
+    }
+  ): Promise<boolean> => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await WebSettingService.save(setting, files);
+      if (result) {
+        setWebSetting(result);
+        return true;
+      }
+      setError('Gagal menyimpan pengaturan website');
+      return false;
+    } catch (err) {
+      setError('Terjadi kesalahan saat menyimpan pengaturan website');
+      console.error('Error saving web setting:', err);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Menghapus file tertentu dari pengaturan website
+   * @param {keyof Pick<WebSetting, 'logo' | 'favicon' | 'cv_id' | 'cv_en' | 'portfolio'>} field - Nama field file yang akan dihapus
+   * @returns {Promise<boolean>} Status keberhasilan operasi
+   */
+  const deleteFile = async (
+    field: keyof Pick<WebSetting, 'logo' | 'favicon' | 'cv_id' | 'cv_en' | 'portfolio'>
+  ): Promise<boolean> => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await WebSettingService.deleteFile(field);
+      if (result) {
+        setWebSetting(result);
+        return true;
+      }
+      setError(`Gagal menghapus ${field} dari pengaturan website`);
+      return false;
+    } catch (err) {
+      setError(`Terjadi kesalahan saat menghapus ${field}`);
+      console.error(`Error deleting ${field}:`, err);
+      return false;
     } finally {
       setLoading(false);
     }
@@ -54,10 +119,10 @@ export const useWebSetting = () => {
     webSetting,
     loading,
     error,
-    updateSetting,
-    getLogoUrl: (path?: string) => WebSettingService.getFileUrl(path || webSetting?.logo),
-    getFaviconUrl: (path?: string) => WebSettingService.getFileUrl(path || webSetting?.favicon),
-    getCvUrl: (path?: string) => WebSettingService.getDownloadUrl(path || webSetting?.cv),
-    getPortfolioUrl: (path?: string) => WebSettingService.getDownloadUrl(path || webSetting?.portfolio)
+    saveWebSetting,
+    deleteFile,
+    refresh: fetchWebSetting
   };
 };
+
+export default useWebSetting;

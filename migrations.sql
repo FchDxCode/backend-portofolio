@@ -440,8 +440,8 @@ CREATE TABLE web_settings (
     logo TEXT,
     favicon TEXT,
     copyright TEXT,
-    cv TEXT,
-    portfolio TEXT,
+    cv_id TEXT,
+    cv_en TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );

@@ -1,14 +1,15 @@
 export interface WebSetting {
-    id: number;
-    title_website?: Record<string, any>;
-    logo?: string;
-    favicon?: string;
-    copyright?: string;
-    cv?: string;
-    portfolio?: string;
-    created_at?: string;
-    updated_at?: string;
-  }
+  id: number;
+  title_website?: Record<string, any>;
+  logo?: string;
+  favicon?: string;
+  copyright?: string;
+  cv_id?: string; 
+  cv_en?: string; 
+  portfolio?: string;
+  created_at?: string;
+  updated_at?: string;
+}
 
 export interface SocialMedia {
     id: number;

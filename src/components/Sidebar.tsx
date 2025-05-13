@@ -151,7 +151,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         { 
           title: "Hero Call Me", 
           icon: <Mail className="w-4 h-4" />, 
-          href: "/banner/hero-call-me", 
+          href: "/hero-call-me", 
           badge: "12",
           badgeColor: "bg-amber-500"
         },
@@ -181,9 +181,9 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       title: "System",
       items: [
         { 
-          title: "Settings", 
+          title: "Web Setting", 
           icon: <Settings className="w-4 h-4" />, 
-          href: "/dashboard/settings" 
+          href: "/web-setting" 
         },
       ]
     }
