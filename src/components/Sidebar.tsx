@@ -117,9 +117,9 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           href: "/category-article" 
         },
         { 
-          title: "Discounts", 
+          title: "Article Tag", 
           icon: <Tag className="w-4 h-4" />, 
-          href: "/dashboard/discounts" 
+          href: "/article-tag" 
         },
       ]
     },

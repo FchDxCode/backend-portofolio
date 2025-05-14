@@ -1,193 +1,281 @@
 "use client";
 
-import React, { useState } from "react";
-import { Search, X, Filter as FilterIcon, ChevronDown } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  Search,
+  X,
+  Filter as FilterIcon,
+  ChevronDown,
+  Check,
+  RotateCw
+} from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
+import { Button } from "./Button";
 
 interface FilterOption {
   label: string;
   value: string;
-  group?: string;
+}
+
+interface FilterGroup {
+  label: string;
+  options: FilterOption[];
+  multiple?: boolean;
 }
 
 interface FilterProps {
-  onFilterChange: (filters: Record<string, string | string[] | boolean | null>) => void;
-  filters?: Record<string, string | string[] | boolean | null>;
+  onApply: (filters: Record<string, string | string[] | boolean | null>) => void;
+  defaultFilters?: Record<string, string | string[] | boolean | null>;
   searchPlaceholder?: string;
-  filterOptions?: {
-    [key: string]: {
-      label: string;
-      options: FilterOption[];
-      multiple?: boolean;
-    };
-  };
+  filterOptions?: Record<string, FilterGroup>;
   className?: string;
 }
 
 export function Filter({
-  onFilterChange,
-  filters = {},
+  onApply,
+  defaultFilters = {},
   searchPlaceholder = "Cari...",
   filterOptions = {},
   className = ""
 }: FilterProps) {
+  const [draft, setDraft] = useState<
+    Record<string, string | string[] | boolean | null>
+  >(defaultFilters);
+
   const [isOpen, setIsOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilters, setActiveFilters] = useState<Record<string, string | string[] | boolean | null>>(filters);
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-    onFilterChange({ ...activeFilters, search: query || null });
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  const setDraftValue = (
+    key: string,
+    value: string | string[] | boolean | null
+  ) => {
+    setDraft((d) => ({ ...d, [key]: value }));
   };
 
-  const handleFilterChange = (key: string, value: string | string[] | boolean | null) => {
-    const newFilters = { ...activeFilters, [key]: value };
-    setActiveFilters(newFilters);
-    onFilterChange(newFilters);
+  const toggleMulti = (key: string, value: string) => {
+    setDraft((d) => {
+      const arr = (d[key] as string[]) || [];
+      const newArr = arr.includes(value)
+        ? arr.filter((v) => v !== value)
+        : [...arr, value];
+      return { ...d, [key]: newArr.length ? newArr : null };
+    });
   };
 
-  const handleSelectFilter = (key: string, value: string, multiple = false) => {
-    if (multiple) {
-      const currentValues = (activeFilters[key] as string[]) || [];
-      if (currentValues.includes(value)) {
-        handleFilterChange(key, currentValues.filter(v => v !== value));
-      } else {
-        handleFilterChange(key, [...currentValues, value]);
-      }
-    } else {
-      handleFilterChange(key, value);
-    }
+  const apply = () => {
+    onApply(draft);
+    setIsOpen(false);
   };
 
-  const handleClearFilter = (key: string) => {
-    const newFilters = { ...activeFilters };
-    delete newFilters[key];
-    setActiveFilters(newFilters);
-    onFilterChange(newFilters);
+  const resetAll = () => {
+    setDraft({});
+    onApply({});
   };
 
-  const handleClearAll = () => {
-    const newFilters = { search: activeFilters.search };
-    setActiveFilters(newFilters);
-    onFilterChange(newFilters);
-  };
-
-  const hasActiveFilters = Object.keys(activeFilters).some(key => 
-    key !== 'search' && activeFilters[key] !== null && 
-    (Array.isArray(activeFilters[key]) ? (activeFilters[key] as string[]).length > 0 : true)
+  const activeBadge = Object.entries(draft).filter(
+    ([k, v]) => k !== "search" && v !== null && (!Array.isArray(v) || v.length)
   );
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      apply();
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, [draft]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   return (
-    <div className={`space-y-3 ${className}`}>
-      <div className="flex flex-col sm:flex-row gap-2">
-        {/* Search input */}
+    <div className={`space-y-4 w-full ${className}`}>
+      {/* Search bar */}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          apply();
+        }}
+        className="flex flex-col sm:flex-row gap-2 w-full"
+      >
         <div className="relative flex-grow">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
             placeholder={searchPlaceholder}
-            value={searchQuery}
-            onChange={handleSearchChange}
-            className="w-full pl-9 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            value={(draft.search as string) ?? ""}
+            onChange={(e) => setDraftValue("search", e.target.value || null)}
+            className="w-full pl-9 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
+        <Button type="submit" variant="secondary" className="w-full sm:w-auto">
+          Cari
+        </Button>
+      </form>
 
-        {/* Filter toggle */}
-        {Object.keys(filterOptions).length > 0 && (
+      {/* Filter dropdown button */}
+      {Object.entries(filterOptions).length > 0 && (
+        <div className="relative">
           <button
+            type="button"
             onClick={() => setIsOpen(!isOpen)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-md border ${
-              isOpen || hasActiveFilters
-                ? "border-primary text-primary"
-                : "border-input text-foreground"
-            }`}
+            className="flex items-center justify-between w-full sm:w-auto px-4 py-2 border rounded-md bg-background"
           >
-            <FilterIcon className="h-4 w-4" />
-            <span>Filter</span>
+            <div className="flex items-center gap-2">
+              <FilterIcon className="h-4 w-4" />
+              <span>Filter</span>
+              {activeBadge.length > 0 && (
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs">
+                  {activeBadge.length}
+                </span>
+              )}
+            </div>
             <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
           </button>
-        )}
-      </div>
 
-      {/* Active filters */}
-      {hasActiveFilters && (
-        <div className="flex flex-wrap gap-2 items-center">
-          <span className="text-xs text-muted-foreground">Filter aktif:</span>
-          {Object.keys(activeFilters).map(key => {
-            if (key === 'search' || activeFilters[key] === null) return null;
+          {/* Dropdown menu */}
+          {isOpen && (
+            <div 
+              ref={dropdownRef}
+              className="absolute z-50 left-0 mt-2 w-full sm:w-72 md:w-96 bg-background rounded-md shadow-lg border overflow-hidden"
+            >
+              <div className="p-4 space-y-4 max-h-96 overflow-y-auto">
+                {Object.entries(filterOptions).map(([key, { label, options, multiple }]) => (
+                  <div key={key} className="space-y-2">
+                    <div className="font-medium text-sm">{label}</div>
+                    {multiple ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        {options.map((option) => {
+                          const selected = Array.isArray(draft[key]) && 
+                            (draft[key] as string[])?.includes(option.value);
+                          return (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => toggleMulti(key, option.value)}
+                              className={`flex items-center justify-between px-3 py-2 text-sm rounded-md ${
+                                selected
+                                  ? "bg-primary/10 text-primary"
+                                  : "hover:bg-muted"
+                              }`}
+                            >
+                              <span>{option.label}</span>
+                              {selected && <Check className="h-4 w-4" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="w-full">
+                        <Tabs
+                          value={(draft[key] as string) || ""}
+                          onValueChange={(value) => 
+                            setDraftValue(key, value === "" ? null : value)
+                          }
+                          className="w-full"
+                        >
+                          <TabsList className="w-full flex flex-wrap h-auto">
+                            <TabsTrigger value="" className="flex-grow">Semua</TabsTrigger>
+                            {options.map((option) => (
+                              <TabsTrigger key={option.value} value={option.value} className="flex-grow">
+                                {option.label}
+                              </TabsTrigger>
+                            ))}
+                          </TabsList>
+                        </Tabs>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-between items-center p-4 border-t">
+                <button
+                  type="button"
+                  onClick={resetAll}
+                  className="text-sm text-muted-foreground hover:text-destructive flex items-center gap-1"
+                >
+                  <RotateCw className="h-3 w-3" />
+                  Reset
+                </button>
+                <Button onClick={apply} size="sm">
+                  Terapkan Filter
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Active filter badges */}
+      {activeBadge.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {activeBadge.map(([key, value]) => {
+            const group = Object.entries(filterOptions).find(
+              ([k]) => k === key
+            )?.[1];
             
-            const filterGroup = filterOptions[key];
-            if (!filterGroup) return null;
-            
-            const value = activeFilters[key];
+            if (!group) return null;
             
             if (Array.isArray(value)) {
-              return value.map((v, i) => {
-                const option = filterGroup.options.find(opt => opt.value === v);
-                return (
-                  <div key={`${key}-${i}`} className="flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-primary/10 text-primary">
-                    <span>{filterGroup.label}: {option?.label || v}</span>
-                    <button onClick={() => handleSelectFilter(key, v, true)} className="hover:text-destructive">
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                );
+              return value.map((v) => {
+                const option = group.options.find((o) => o.value === v);
+                return option ? (
+                  <Badge
+                    key={`${key}-${v}`}
+                    label={`${group.label}: ${option.label}`}
+                    onClear={() => toggleMulti(key, v)}
+                  />
+                ) : null;
               });
             }
             
-            const option = filterGroup.options.find(opt => opt.value === value);
-            return (
-              <div key={key} className="flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-primary/10 text-primary">
-                <span>{filterGroup.label}: {option?.label || value}</span>
-                <button onClick={() => handleClearFilter(key)} className="hover:text-destructive">
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            );
+            const option = group.options.find((o) => o.value === value);
+            return option ? (
+              <Badge
+                key={key}
+                label={`${group.label}: ${option.label}`}
+                onClear={() => setDraftValue(key, null)}
+              />
+            ) : null;
           })}
-          
-          <button 
-            onClick={handleClearAll}
-            className="text-xs text-muted-foreground hover:text-destructive underline"
-          >
-            Hapus semua
-          </button>
+          {activeBadge.length > 1 && (
+            <button
+              onClick={resetAll}
+              className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1"
+            >
+              <RotateCw className="h-3 w-3" />
+              Reset Semua
+            </button>
+          )}
         </div>
       )}
+    </div>
+  );
+}
 
-      {/* Filter dropdown */}
-      {isOpen && Object.keys(filterOptions).length > 0 && (
-        <div className="p-4 border rounded-md bg-card shadow-sm">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {Object.entries(filterOptions).map(([key, filterGroup]) => (
-              <div key={key} className="space-y-2">
-                <h3 className="text-sm font-medium">{filterGroup.label}</h3>
-                <div className="space-y-1">
-                  {filterGroup.options.map(option => {
-                    const isSelected = filterGroup.multiple 
-                      ? Array.isArray(activeFilters[key]) && (activeFilters[key] as string[])?.includes(option.value)
-                      : activeFilters[key] === option.value;
-                      
-                    return (
-                      <div key={option.value} className="flex items-center">
-                        <label className="flex items-center gap-2 text-sm cursor-pointer">
-                          <input
-                            type={filterGroup.multiple ? "checkbox" : "radio"}
-                            checked={isSelected}
-                            onChange={() => handleSelectFilter(key, option.value, filterGroup.multiple)}
-                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                          />
-                          {option.label}
-                        </label>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+function Badge({
+  label,
+  onClear
+}: {
+  label: string;
+  onClear: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-primary/10 text-primary">
+      <span>{label}</span>
+      <button onClick={onClear} className="hover:text-destructive">
+        <X className="h-3 w-3" />
+      </button>
     </div>
   );
 }

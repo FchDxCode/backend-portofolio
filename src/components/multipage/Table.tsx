@@ -11,10 +11,12 @@ export interface Column<T> {
 }
 
 export interface ActionButton<T> {
-  label: string;
-  icon?: React.ReactNode;
+  // Perubahan tipe untuk mendukung string statis atau fungsi dinamis untuk label
+  label: string | ((item: T) => string);
+  // Perubahan tipe untuk mendukung ReactNode statis atau fungsi dinamis untuk icon
+  icon?: React.ReactNode | ((item: T) => React.ReactNode); 
   onClick: (item: T) => void;
-  variant?: "primary" | "secondary" | "success" | "danger";
+  variant?: "primary" | "secondary" | "success" | "danger" | "destructive";
   disabled?: boolean | ((item: T) => boolean);
   hidden?: boolean | ((item: T) => boolean);
 }
@@ -33,6 +35,8 @@ interface TableProps<T> {
     totalPages: number;
     onPageChange: (page: number) => void;
   };
+  // Tambahan prop untuk custom rendering action button
+  renderAction?: (action: ActionButton<T>, item: T) => React.ReactNode;
 }
 
 export function Table<T>({
@@ -44,7 +48,8 @@ export function Table<T>({
   emptyMessage = "Tidak ada data",
   className = "",
   onRowClick,
-  pagination
+  pagination,
+  renderAction
 }: TableProps<T>) {
   const [sortField, setSortField] = useState<keyof T | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
@@ -83,20 +88,36 @@ export function Table<T>({
     });
   }, [data, sortField, sortDirection]);
 
-  // Action button component
+  // Action button component - DIUBAH untuk mendukung fungsi dinamis
   const ActionButton = ({ action, item }: { action: ActionButton<T>, item: T }) => {
     const isDisabled = typeof action.disabled === 'function' ? action.disabled(item) : action.disabled;
     const isHidden = typeof action.hidden === 'function' ? action.hidden(item) : action.hidden;
     
     if (isHidden) return null;
+
+    // Jika renderAction tersedia, gunakan itu
+    if (renderAction) {
+      return renderAction(action, item);
+    }
     
     // Styling based on variant
     const variantClasses = {
       primary: `bg-primary text-primary-foreground hover:bg-primary/90`,
       secondary: `bg-secondary text-secondary-foreground hover:bg-secondary/80`,
       success: `bg-emerald-500 text-white hover:bg-emerald-600`,
-      danger: `bg-destructive text-destructive-foreground hover:bg-destructive/90`
+      danger: `bg-destructive text-destructive-foreground hover:bg-destructive/90`,
+      destructive: `bg-destructive text-destructive-foreground hover:bg-destructive/90`
     };
+
+    // Resolve dynamic label (jika label adalah fungsi)
+    const buttonLabel = typeof action.label === 'function' 
+      ? action.label(item) 
+      : action.label;
+      
+    // Resolve dynamic icon (jika icon adalah fungsi)
+    const buttonIcon = typeof action.icon === 'function'
+      ? action.icon(item)
+      : action.icon;
 
     return (
       <button
@@ -107,11 +128,11 @@ export function Table<T>({
           transition-colors
           flex items-center gap-1.5
           disabled:opacity-50 disabled:cursor-not-allowed
-          ${variantClasses[action.variant || 'primary']}
+          ${variantClasses[action.variant || 'primary'] || variantClasses.primary}
         `}
       >
-        {action.icon}
-        {action.label}
+        {buttonIcon}
+        {buttonLabel}
       </button>
     );
   };
