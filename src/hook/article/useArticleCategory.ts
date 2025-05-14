@@ -68,12 +68,22 @@ export const useArticleCategories = (initialFilters?: {
 
   const updateCategoryIcon = async (id: number, file: File) => {
     try {
+      if (!file || file.size === 0) {
+        throw new Error('File tidak valid');
+      }
+  
       setLoading(true);
+      console.log(`Attempting to update icon for category ${id} with file ${file.name} (${file.size} bytes)`);
+      
       const updatedCategory = await ArticleCategoryService.updateIcon(id, file);
+      console.log(`Icon updated successfully for category ${id}`);
+      
       setCategories(prev => prev.map(c => c.id === id ? updatedCategory : c));
       return updatedCategory;
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
+      const message = err instanceof Error ? err.message : 'Terjadi kesalahan saat mengupdate ikon';
+      console.error(`Error updating icon for category ${id}:`, err);
+      setError(err instanceof Error ? err : new Error(message));
       throw err;
     } finally {
       setLoading(false);

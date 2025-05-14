@@ -1,5 +1,3 @@
-'use server';
-
 import { createClient } from '@/src/utils/supabase/client';
 import { ArticleCategory } from '@/src/models/ArticleModels';
 import {
@@ -84,15 +82,41 @@ export class ArticleCategoryService {
 
   static async updateIcon(id: number, file: File): Promise<ArticleCategory> {
     try {
+      // Tambahkan validasi file
+      if (!file || file.size === 0) {
+        throw new Error('File invalid atau kosong');
+      }
+      
+      console.debug("Uploading icon file:", file.name, file.type, file.size);
       const current = await this.getById(id);
       if (!current) throw new Error('Category not found');
-
-      const iconPath = await saveFile(file, {
-        folder: `${this.FOLDER}/${id}`,
-        deletePrev: current.icon ?? null, 
-      });
-
-      return this.update(id, { icon: iconPath });
+  
+      // Tambahkan try-catch spesifik untuk saveFile
+      let iconPath;
+      try {
+        iconPath = await saveFile(file, {
+          folder: `${this.FOLDER}/${id}`,
+          deletePrev: current.icon ?? null, 
+        });
+        console.debug("Icon uploaded successfully. Path:", iconPath);
+      } catch (saveErr) {
+        console.error("Error saving file:", saveErr);
+        throw new Error(`Gagal menyimpan file: ${saveErr instanceof Error ? saveErr.message : 'Unknown error'}`);
+      }
+  
+      // Tambahkan try-catch spesifik untuk update data
+      try {
+        const updated = await this.update(id, { icon: iconPath });
+        console.debug("Category updated with new icon:", updated);
+        return updated;
+      } catch (updateErr) {
+        console.error("Error updating category with icon:", updateErr);
+        // Hapus file yang sudah terupload jika update gagal
+        try {
+          await deleteFile(iconPath);
+        } catch {}
+        throw new Error(`Gagal mengupdate kategori: ${updateErr instanceof Error ? updateErr.message : 'Unknown error'}`);
+      }
     } catch (err) {
       console.error('Error updating category icon:', err);
       throw err;

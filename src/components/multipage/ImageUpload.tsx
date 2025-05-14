@@ -1,18 +1,18 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Image, Upload, X } from "lucide-react";
 
 interface ImageUploadProps {
   label?: string;
   description?: string;
   accept?: string;
-  value?: string | null;
+  value?: string | File | null; // Ubah tipe value untuk mendukung File
   onChange: (file: File | null) => void;
   onRemove?: () => Promise<void>;
   error?: string;
   className?: string;
-  maxSize?: number; // in MB
+  maxSize?: number;
   aspectRatio?: "square" | "wide" | "tall" | "free";
   previewSize?: "small" | "medium" | "large";
 }
@@ -26,14 +26,39 @@ export function ImageUpload({
   onRemove,
   error,
   className = "",
-  maxSize = 2, // Default 2MB
+  maxSize = 2,
   aspectRatio = "free",
   previewSize = "medium"
 }: ImageUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
+  // Fungsi untuk menghasilkan preview URL
+  const generatePreviewUrl = (val: string | File | null) => {
+    if (!val) return null;
+    if (val instanceof File) {
+      return URL.createObjectURL(val);
+    }
+    return val;
+  };
+
+  // Effect untuk membersihkan URL objek saat komponen unmount
+  useEffect(() => {
+    return () => {
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  // Effect untuk mengupdate preview URL saat value berubah
+  useEffect(() => {
+    const newPreviewUrl = generatePreviewUrl(value);
+    setPreviewUrl(newPreviewUrl);
+  }, [value]);
+
   const previewSizeClass = {
     small: "h-32",
     medium: "h-48",
@@ -97,6 +122,11 @@ export function ImageUpload({
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+    // Bersihkan preview URL jika ada
+    if (previewUrl && previewUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setPreviewUrl(null);
   };
 
   return (
@@ -105,11 +135,11 @@ export function ImageUpload({
         <div className="text-sm font-medium text-foreground">{label}</div>
       )}
       
-      {value ? (
+      {previewUrl ? (
         <div className="relative rounded-lg overflow-hidden border bg-muted/30">
           <div className={`${previewSizeClass[previewSize]} ${aspectRatioClass[aspectRatio]} relative`}>
             <img 
-              src={typeof value === 'string' ? value : URL.createObjectURL(value as unknown as Blob)} 
+              src={previewUrl}
               alt="Preview"
               className="w-full h-full object-cover"
             />

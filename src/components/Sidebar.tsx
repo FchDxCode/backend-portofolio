@@ -112,9 +112,9 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           href: "/certificate"
         },
         { 
-          title: "Invoices", 
+          title: "Category Article", 
           icon: <File className="w-4 h-4" />, 
-          href: "/dashboard/invoices" 
+          href: "/category-article" 
         },
         { 
           title: "Discounts", 
