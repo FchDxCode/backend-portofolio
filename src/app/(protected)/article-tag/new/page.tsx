@@ -1,67 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { PageHeader } from "@/src/components/multipage/PageHeader";
 import { Button } from "@/src/components/multipage/Button";
 import { FormSection } from "@/src/components/multipage/FormSection";
 import { DetailView } from "@/src/components/multipage/DetailView";
 import { useArticleTags } from "@/src/hook/article/useArticleTag";
-import { Loader2 } from "lucide-react";
-import { ArticleTagService } from "@/src/services/article/ArticleTagServices";
 
-export default function ArticleTagEditPage() {
+export default function ArticleTagCreatePage() {
   const router = useRouter();
-  const params = useParams();
-  const tagId = parseInt(params.id as string);
+  const { createTag } = useArticleTags();
   
-  const { updateTag } = useArticleTags();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   // Form state
   const [titleId, setTitleId] = useState("");
   const [titleEn, setTitleEn] = useState("");
   const [isActive, setIsActive] = useState(true);
-  
-  // UI state
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Fetch tag data directly from service
-  useEffect(() => {
-    const fetchTag = async () => {
-      if (!tagId || isNaN(tagId)) {
-        setError("ID tag tidak valid");
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        setIsLoading(true);
-        
-        // Fetch tag directly from service instead of using hook state
-        const tag = await ArticleTagService.getById(tagId);
-        
-        if (!tag) {
-          setError("Tag tidak ditemukan");
-          return;
-        }
-        
-        // Populate form
-        setTitleId(tag.title?.id || "");
-        setTitleEn(tag.title?.en || "");
-        setIsActive(tag.is_active || false);
-        
-      } catch (err) {
-        setError("Gagal memuat data tag");
-        console.error(err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchTag();
-  }, [tagId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,8 +38,8 @@ export default function ArticleTagEditPage() {
         is_active: isActive
       };
       
-      // Update tag
-      await updateTag(tagId, tagData);
+      // Create tag
+      await createTag(tagData);
       
       // Redirect to tag list page
       router.push("/article-tag");
@@ -94,18 +51,10 @@ export default function ArticleTagEditPage() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Edit Tag Artikel"
+        title="Tambah Tag Artikel"
         backUrl="/article-tag"
         actions={
           <div className="flex gap-2">
@@ -144,7 +93,6 @@ export default function ArticleTagEditPage() {
                     </label>
                     <input
                       id="titleId"
-                      name="titleId"
                       value={titleId}
                       onChange={(e) => setTitleId(e.target.value)}
                       className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
@@ -159,7 +107,6 @@ export default function ArticleTagEditPage() {
                     </label>
                     <input
                       id="titleEn"
-                      name="titleEn"
                       value={titleEn}
                       onChange={(e) => setTitleEn(e.target.value)}
                       className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
@@ -173,8 +120,6 @@ export default function ArticleTagEditPage() {
                       <label className="flex items-center space-x-2">
                         <input
                           type="radio"
-                          id="status-active"
-                          name="status"
                           checked={isActive}
                           onChange={() => setIsActive(true)}
                           className="h-4 w-4 text-primary border-gray-300 focus:ring-primary"
@@ -184,8 +129,6 @@ export default function ArticleTagEditPage() {
                       <label className="flex items-center space-x-2">
                         <input
                           type="radio"
-                          id="status-inactive"
-                          name="status"
                           checked={!isActive}
                           onChange={() => setIsActive(false)}
                           className="h-4 w-4 text-primary border-gray-300 focus:ring-primary"
