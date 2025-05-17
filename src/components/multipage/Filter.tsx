@@ -140,7 +140,7 @@ export function Filter({
                 </span>
               )}
             </div>
-            <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+            <ChevronDown className={`h-4 w-4 transition-transform mx-2 ${isOpen ? "rotate-180" : ""}`} />
           </button>
 
           {/* Dropdown menu */}

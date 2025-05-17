@@ -82,7 +82,7 @@ export const useArticleTags = (initialFilters?: {
 
   useEffect(() => {
     fetchTags();
-  }, [JSON.stringify(filters)]); // Re-fetch when filters change
+  }, [JSON.stringify(filters)]); 
 
   return {
     tags,

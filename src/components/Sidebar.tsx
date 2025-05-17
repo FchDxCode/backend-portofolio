@@ -98,28 +98,19 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           ]
         },
         { 
-          title: "Customers", 
+          title: "Article", 
           icon: <Users className="w-4 h-4" />, 
-          href: "/dashboard/customers",
+          href: "/article",
           submenu: [
-            { title: "All Customers", href: "/dashboard/customers" },
-            { title: "Add New", href: "/dashboard/customers/new" }
+            { title: "All Article", href: "/article" },
+            { title: "Category Article", href: "/category-article" },
+            { title: "Tag Article", href: "/article-tag" }
           ]
         },
         { 
           title: "Certificate", 
           icon: <Package className="w-4 h-4" />, 
           href: "/certificate"
-        },
-        { 
-          title: "Category Article", 
-          icon: <File className="w-4 h-4" />, 
-          href: "/category-article" 
-        },
-        { 
-          title: "Article Tag", 
-          icon: <Tag className="w-4 h-4" />, 
-          href: "/article-tag" 
         },
       ]
     },

@@ -6,12 +6,11 @@ import { PageHeader } from "@/src/components/multipage/PageHeader";
 import { Button } from "@/src/components/multipage/Button";
 import { FormSection } from "@/src/components/multipage/FormSection";
 import { DetailView } from "@/src/components/multipage/DetailView";
-import { ImageUpload } from "@/src/components/multipage/ImageUpload";
-import { useArticleCategories } from "@/src/hook/article/useArticleCategory";
+import { useArticleTags } from "@/src/hook/article/useArticleTag";
 
-export default function CategoryArticleCreatePage() {
+export default function ArticleTagCreatePage() {
   const router = useRouter();
-  const { createCategory, updateCategoryIcon } = useArticleCategories();
+  const { createTag } = useArticleTags();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,10 +18,7 @@ export default function CategoryArticleCreatePage() {
   // Form state
   const [titleId, setTitleId] = useState("");
   const [titleEn, setTitleEn] = useState("");
-  const [subtitleId, setSubtitleId] = useState("");
-  const [subtitleEn, setSubtitleEn] = useState("");
   const [isActive, setIsActive] = useState(true);
-  const [iconFile, setIconFile] = useState<File | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,35 +32,19 @@ export default function CategoryArticleCreatePage() {
       setIsSubmitting(true);
       setError(null);
       
-      // Prepare category data
-      const categoryData = {
+      // Prepare tag data
+      const tagData = {
         title: { id: titleId, en: titleEn },
-        subtitle: { id: subtitleId, en: subtitleEn },
         is_active: isActive
       };
       
-      // Create category
-      const newCategory = await createCategory(categoryData);
+      // Create tag
+      await createTag(tagData);
       
-      // Upload icon if selected
-      if (iconFile && newCategory.id) {
-        try {
-          console.log('Uploading icon file:', iconFile); // Debug
-          const formData = new FormData();
-          formData.append('file', iconFile);
-          
-          await updateCategoryIcon(newCategory.id, iconFile);
-          console.log('Icon uploaded successfully'); // Debug
-        } catch (iconError) {
-          console.error('Error uploading icon:', iconError);
-          // Tetap lanjutkan meski upload icon gagal
-        }
-      }
-      
-      // Redirect to category list page
-      router.push("/category-article");
+      // Redirect to tag list page
+      router.push("/article-tag");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan saat menyimpan kategori");
+      setError(err instanceof Error ? err.message : "Terjadi kesalahan saat menyimpan tag");
       console.error(err);
     } finally {
       setIsSubmitting(false);
@@ -74,13 +54,13 @@ export default function CategoryArticleCreatePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Tambah Kategori Artikel"
-        backUrl="/category-article"
+        title="Tambah Tag Artikel"
+        backUrl="/article-tag"
         actions={
           <div className="flex gap-2">
             <Button 
               variant="outline" 
-              onClick={() => router.push("/category-article")}
+              onClick={() => router.push("/article-tag")}
             >
               Batal
             </Button>
@@ -103,9 +83,9 @@ export default function CategoryArticleCreatePage() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <DetailView>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6">
             <div className="space-y-6">
-              <FormSection title="Informasi Dasar">
+              <FormSection title="Informasi Tag">
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <label htmlFor="titleId" className="text-sm font-medium block">
@@ -135,32 +115,6 @@ export default function CategoryArticleCreatePage() {
                   </div>
                   
                   <div className="space-y-2">
-                    <label htmlFor="subtitleId" className="text-sm font-medium block">
-                      Subtitle (ID)
-                    </label>
-                    <input
-                      id="subtitleId"
-                      value={subtitleId}
-                      onChange={(e) => setSubtitleId(e.target.value)}
-                      className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-                      placeholder="Masukkan subtitle dalam Bahasa Indonesia"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label htmlFor="subtitleEn" className="text-sm font-medium block">
-                      Subtitle (EN)
-                    </label>
-                    <input
-                      id="subtitleEn"
-                      value={subtitleEn}
-                      onChange={(e) => setSubtitleEn(e.target.value)}
-                      className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-                      placeholder="Masukkan subtitle dalam Bahasa Inggris"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
                     <label className="text-sm font-medium block">Status</label>
                     <div className="flex items-center space-x-4">
                       <label className="flex items-center space-x-2">
@@ -182,26 +136,10 @@ export default function CategoryArticleCreatePage() {
                         <span>Tidak Aktif</span>
                       </label>
                     </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Tag yang aktif akan ditampilkan di situs blog
+                    </p>
                   </div>
-                </div>
-              </FormSection>
-            </div>
-            
-            <div className="space-y-6">
-              <FormSection title="Icon Kategori">
-                <div className="space-y-2">
-                <ImageUpload
-                    label="Upload Icon"
-                    description="Format: JPG, PNG, SVG (Ukuran maks: 2MB, Rekomendasi: 128x128px)"
-                    value={iconFile}  // <- Gunakan iconFile state
-                    onChange={setIconFile}
-                    maxSize={2}
-                    aspectRatio="square"
-                    previewSize="medium"
-                  />
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Icon akan digunakan untuk merepresentasikan kategori di berbagai tampilan pada website.
-                  </p>
                 </div>
               </FormSection>
             </div>
