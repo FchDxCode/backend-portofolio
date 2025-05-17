@@ -10,6 +10,7 @@ interface InputProps {
   className?: string;
   language: string;
   required?: boolean;
+  helperText?: string;
 }
 
 export function InputMultipage({
@@ -20,6 +21,7 @@ export function InputMultipage({
     className = "",
     language,
     required = false,
+    helperText = "",
 }: InputProps) {
 
   
@@ -34,6 +36,7 @@ export function InputMultipage({
         placeholder={placeholder}
         required={required}
       />
+      <span className="text-xs text-muted-foreground">{helperText}</span>
     </div>
   );
 }
