@@ -9,6 +9,8 @@ import { DetailView } from "@/src/components/multipage/DetailView";
 import { useArticleTags } from "@/src/hook/article/useArticleTag";
 import { Loader2 } from "lucide-react";
 import { ArticleTagService } from "@/src/services/article/ArticleTagServices";
+import { InputMultipage } from "@/src/components/multipage/InputMultipage";
+import { RadioButtonMultipage } from "@/src/components/multipage/RadioButtonMultipage";
 
 export default function ArticleTagEditPage() {
   const router = useRouter();
@@ -139,60 +141,35 @@ export default function ArticleTagEditPage() {
               <FormSection title="Informasi Tag">
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label htmlFor="titleId" className="text-sm font-medium block">
-                      Judul (ID) <span className="text-destructive">*</span>
-                    </label>
-                    <input
-                      id="titleId"
-                      name="titleId"
+                    <InputMultipage
                       value={titleId}
                       onChange={(e) => setTitleId(e.target.value)}
-                      className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-                      placeholder="Masukkan judul dalam Bahasa Indonesia"
-                      required
+                      label="Judul (ID)"
+                      language="id"
+                      required={true}
                     />
                   </div>
                   
                   <div className="space-y-2">
-                    <label htmlFor="titleEn" className="text-sm font-medium block">
-                      Judul (EN)
-                    </label>
-                    <input
-                      id="titleEn"
-                      name="titleEn"
+                    <InputMultipage
                       value={titleEn}
                       onChange={(e) => setTitleEn(e.target.value)}
-                      className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-                      placeholder="Masukkan judul dalam Bahasa Inggris"
+                      label="Judul (EN)"
+                      language="en"
+                      required={true}
                     />
                   </div>
                   
                   <div className="space-y-2">
-                    <label className="text-sm font-medium block">Status</label>
-                    <div className="flex items-center space-x-4">
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          id="status-active"
-                          name="status"
-                          checked={isActive}
-                          onChange={() => setIsActive(true)}
-                          className="h-4 w-4 text-primary border-gray-300 focus:ring-primary"
-                        />
-                        <span>Aktif</span>
-                      </label>
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          id="status-inactive"
-                          name="status"
-                          checked={!isActive}
-                          onChange={() => setIsActive(false)}
-                          className="h-4 w-4 text-primary border-gray-300 focus:ring-primary"
-                        />
-                        <span>Tidak Aktif</span>
-                      </label>
-                    </div>
+                    <RadioButtonMultipage 
+                      label="Status"
+                      value={isActive.toString()}
+                      onChange={(value) => setIsActive(value === "true")}
+                      options={[
+                        { value: "true", label: "Aktif" },
+                        { value: "false", label: "Tidak Aktif" }
+                      ]}
+                    />
                     <p className="text-xs text-muted-foreground mt-2">
                       Tag yang aktif akan ditampilkan di situs blog
                     </p>

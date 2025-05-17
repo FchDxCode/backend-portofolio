@@ -10,6 +10,8 @@ import { ImageUpload } from "@/src/components/multipage/ImageUpload";
 import { useArticleCategories } from "@/src/hook/article/useArticleCategory";
 import { ArticleCategoryService } from "@/src/services/article/ArticleCategoryServices";
 import { ArticleCategory } from "@/src/models/ArticleModels";
+import { InputMultipage } from "@/src/components/multipage/InputMultipage";
+import { RadioButtonMultipage } from "@/src/components/multipage/RadioButtonMultipage";
 
 export default function CategoryArticleEditPage() {
   const router = useRouter();
@@ -154,85 +156,49 @@ export default function CategoryArticleEditPage() {
         <DetailView>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-6">
-              <FormSection title="Informasi Dasar">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label htmlFor="titleId" className="text-sm font-medium block">
-                      Judul (ID) <span className="text-destructive">*</span>
-                    </label>
-                    <input
-                      id="titleId"
+            <FormSection title="Informasi Dasar">
+                    <InputMultipage
                       value={titleId}
                       onChange={(e) => setTitleId(e.target.value)}
-                      className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-                      placeholder="Masukkan judul dalam Bahasa Indonesia"
-                      required
+                      label="Judul (ID)"
+                      language="id"
+                      required={true}
                     />
-                  </div>
                   
-                  <div className="space-y-2">
-                    <label htmlFor="titleEn" className="text-sm font-medium block">
-                      Judul (EN)
-                    </label>
-                    <input
-                      id="titleEn"
+                    <InputMultipage
                       value={titleEn}
                       onChange={(e) => setTitleEn(e.target.value)}
-                      className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-                      placeholder="Masukkan judul dalam Bahasa Inggris"
+                      label="Judul (EN)"
+                      language="en"
+                      required={true}
                     />
-                  </div>
                   
-                  <div className="space-y-2">
-                    <label htmlFor="subtitleId" className="text-sm font-medium block">
-                      Subtitle (ID)
-                    </label>
-                    <input
-                      id="subtitleId"
+                  <InputMultipage
                       value={subtitleId}
                       onChange={(e) => setSubtitleId(e.target.value)}
-                      className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-                      placeholder="Masukkan subtitle dalam Bahasa Indonesia"
+                      label="Subtitle (ID)"
+                      language="id"
+                      required={true}
                     />
-                  </div>
                   
-                  <div className="space-y-2">
-                    <label htmlFor="subtitleEn" className="text-sm font-medium block">
-                      Subtitle (EN)
-                    </label>
-                    <input
-                      id="subtitleEn"
+                    <InputMultipage
                       value={subtitleEn}
                       onChange={(e) => setSubtitleEn(e.target.value)}
-                      className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-                      placeholder="Masukkan subtitle dalam Bahasa Inggris"
+                      label="Subtitle (EN)"
+                      language="en"
+                      required={true}
                     />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium block">Status</label>
-                    <div className="flex items-center space-x-4">
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          checked={isActive}
-                          onChange={() => setIsActive(true)}
-                          className="h-4 w-4 text-primary border-gray-300 focus:ring-primary"
-                        />
-                        <span>Aktif</span>
-                      </label>
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          checked={!isActive}
-                          onChange={() => setIsActive(false)}
-                          className="h-4 w-4 text-primary border-gray-300 focus:ring-primary"
-                        />
-                        <span>Tidak Aktif</span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
+                    
+                    <RadioButtonMultipage
+                      label="Status"
+                      value={isActive.toString()}
+                      onChange={(value) => setIsActive(value === "true")}
+                      options={[
+                        { value: "true", label: "Aktif" },
+                        { value: "false", label: "Tidak Aktif" }
+                      ]}
+                    />
+                        
               </FormSection>
             </div>
             
