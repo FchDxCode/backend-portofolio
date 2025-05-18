@@ -1,5 +1,3 @@
-'use server';
-
 import { createClient } from '@/src/utils/supabase/client';
 import { Skill } from '@/src/models/SkillModels';
 import { saveFile, deleteFile } from '@/src/utils/server/FileStorage'; 
