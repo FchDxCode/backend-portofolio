@@ -391,14 +391,14 @@ export default function ExperienceEdit() {
               {/* Company Logo */}
               <FormSection title="Logo Perusahaan">
                 <ImageUpload
-                  onChange={(file) => {
+                  onChange={(file: File | null) => {
                     setLogoFile(file);
                     // kalau file = null, berarti user klik hapus → clear URL lama juga
                     if (file === null) {
                       setCurrentLogoUrl(null);
                     }
                   }}
-                  value={logoFile || currentLogoUrl}
+                  value={logoFile}
                   maxSize={5}
                   aspectRatio="square"
                   label="Unggah Logo"
