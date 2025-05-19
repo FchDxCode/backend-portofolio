@@ -1,5 +1,6 @@
 import { createClient } from "@/src/utils/supabase/client";
 import { Experience } from "@/src/models/ExperienceModels";
+import { ExperienceSkillService } from "@/src/services/experience/ExperienceSkillsServices";
 
 const supabase = createClient();
 
@@ -8,7 +9,7 @@ export class ExperienceService {
 
   static async getAll(params?: {
     categoryId?: number;
-    skillId?: number;
+    skillId?: number; // Tambahkan filter by skill
     search?: string;
     sort?: 'created_at' | 'experience_long';
     order?: 'asc' | 'desc';
@@ -24,8 +25,21 @@ export class ExperienceService {
         query = query.eq('experience_category_id', params.categoryId);
       }
 
+      // Filter by skill ID jika diperlukan
       if (params?.skillId) {
-        query = query.eq('skill_id', params.skillId);
+        // Dapatkan experience_ids yang memiliki skill tersebut
+        const { data: experienceSkills } = await supabase
+          .from('experience_skills')
+          .select('experience_id')
+          .eq('skill_id', params.skillId);
+
+        if (experienceSkills && experienceSkills.length > 0) {
+          const experienceIds = experienceSkills.map(es => es.experience_id);
+          query = query.in('id', experienceIds);
+        } else {
+          // Jika tidak ada experience dengan skill tersebut, kembalikan array kosong
+          return { data: [], count: 0 };
+        }
       }
 
       if (params?.search) {
@@ -57,7 +71,7 @@ export class ExperienceService {
     }
   }
 
-  static async getById(id: number): Promise<Experience | null> {
+  static async getById(id: number, includeSkills: boolean = false): Promise<Experience | null> {
     try {
       const { data, error } = await supabase
         .from(this.TABLE_NAME)
@@ -66,6 +80,13 @@ export class ExperienceService {
         .single();
 
       if (error) throw error;
+      
+      // Jika includeSkills true, tambahkan data skills ke experience
+      if (data && includeSkills) {
+        const skillIds = await ExperienceSkillService.getSkillsByExperienceId(id);
+        return { ...data, skillIds };
+      }
+      
       return data;
     } catch (error) {
       console.error('Error fetching experience:', error);
@@ -73,7 +94,10 @@ export class ExperienceService {
     }
   }
 
-  static async create(experience: Omit<Experience, 'id' | 'created_at' | 'updated_at'>): Promise<Experience> {
+  static async create(
+    experience: Omit<Experience, 'id' | 'created_at' | 'updated_at'>, 
+    skillIds?: number[]
+  ): Promise<Experience> {
     try {
       await this.validateRelations(experience);
       
@@ -83,6 +107,11 @@ export class ExperienceService {
 
       if (experience.experience_long !== undefined && experience.experience_long < 0) {
         throw new Error('Experience duration cannot be negative');
+      }
+
+      // Validate company_logo if provided (should be a valid path)
+      if (experience.company_logo && !experience.company_logo.startsWith('/uploads/')) {
+        throw new Error('Invalid company logo path');
       }
 
       const { data, error } = await supabase
@@ -96,6 +125,12 @@ export class ExperienceService {
         .single();
 
       if (error) throw error;
+      
+      // Jika ada skillIds, tambahkan ke relasi experience_skills
+      if (data && skillIds && skillIds.length > 0) {
+        await ExperienceSkillService.setSkillsForExperience(data.id, skillIds);
+      }
+      
       return data;
     } catch (error) {
       console.error('Error creating experience:', error);
@@ -103,7 +138,11 @@ export class ExperienceService {
     }
   }
 
-  static async update(id: number, experience: Partial<Experience>): Promise<Experience> {
+  static async update(
+    id: number, 
+    experience: Partial<Experience>,
+    skillIds?: number[]
+  ): Promise<Experience> {
     try {
       await this.validateRelations(experience);
 
@@ -113,6 +152,11 @@ export class ExperienceService {
 
       if (experience.experience_long !== undefined && experience.experience_long < 0) {
         throw new Error('Experience duration cannot be negative');
+      }
+
+      // Validate company_logo if provided (should be a valid path)
+      if (experience.company_logo && !experience.company_logo.startsWith('/uploads/')) {
+        throw new Error('Invalid company logo path');
       }
 
       const { data, error } = await supabase
@@ -126,6 +170,12 @@ export class ExperienceService {
         .single();
 
       if (error) throw error;
+      
+      // Jika skillIds disediakan (bisa [] kosong atau array dengan nilai), update skills
+      if (data && skillIds !== undefined) {
+        await ExperienceSkillService.setSkillsForExperience(id, skillIds);
+      }
+      
       return data;
     } catch (error) {
       console.error('Error updating experience:', error);
@@ -133,14 +183,28 @@ export class ExperienceService {
     }
   }
 
-  static async delete(id: number): Promise<void> {
+  static async delete(id: number): Promise<string | undefined> {
     try {
+      // Get the experience to check if it has a company logo
+      const { data: experience } = await supabase
+        .from(this.TABLE_NAME)
+        .select('company_logo')
+        .eq('id', id)
+        .single();
+
+      // Hapus semua relasi skill terlebih dahulu
+      await ExperienceSkillService.deleteAllSkillsForExperience(id);
+      
+      // Delete the experience
       const { error } = await supabase
         .from(this.TABLE_NAME)
         .delete()
         .eq('id', id);
 
       if (error) throw error;
+      
+      // Return the company_logo path if it exists (for optional cleanup)
+      return experience?.company_logo;
     } catch (error) {
       console.error('Error deleting experience:', error);
       throw error;
@@ -157,18 +221,6 @@ export class ExperienceService {
 
       if (!data) {
         throw new Error('Invalid experience category ID');
-      }
-    }
-
-    if (experience.skill_id) {
-      const { data } = await supabase
-        .from('skills')
-        .select('id')
-        .eq('id', experience.skill_id)
-        .single();
-
-      if (!data) {
-        throw new Error('Invalid skill ID');
       }
     }
   }

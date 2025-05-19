@@ -4,39 +4,49 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { PageHeader } from "@/src/components/multipage/PageHeader";
 import { Button } from "@/src/components/multipage/Button";
-import { DetailView } from "@/src/components/multipage/DetailView";
-import { ArticleService } from "@/src/services/article/ArticleServices";
-import { FormSection } from "@/src/components/multipage/FormSection";
+import { DetailView, DetailItem } from "@/src/components/multipage/DetailView";
 import { Edit, ArrowLeft, Eye, Clock, ThumbsUp } from "lucide-react";
+import { ArticleService } from "@/src/services/article/ArticleServices";
 import { createClient } from '@/src/utils/supabase/client';
+import { Article } from "@/src/models/ArticleModels";
 
 const supabase = createClient();
+
+type Lang = 'id' | 'en';
+
+// Extended Article type to include tags
+interface ArticleWithTags extends Article {
+  tags?: Array<{
+    id: number;
+    title?: Record<string, string>;
+    [key: string]: any;
+  }>;
+}
 
 export default function ArticleDetailPage() {
   const router = useRouter();
   const params = useParams();
   const articleId = Number(params.id);
   
-  // Data state
-  const [article, setArticle] = useState<any>(null);
+  // State with proper typing
+  const [article, setArticle] = useState<ArticleWithTags | null>(null);
   const [category, setCategory] = useState<any>(null);
   const [tags, setTags] = useState<any[]>([]);
-  
-  // UI state
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<Lang>('id');
 
   // Fetch article data
   useEffect(() => {
     const fetchArticle = async () => {
       try {
         setIsLoading(true);
-        const articleData = await ArticleService.getById(articleId);
+        const articleData = await ArticleService.getById(articleId) as ArticleWithTags;
         
         if (articleData) {
           setArticle(articleData);
           
-          // Fetch category if needed
+          // Get category if available
           if (articleData.article_category_id) {
             try {
               const { data: categoryData } = await supabase
@@ -51,11 +61,11 @@ export default function ArticleDetailPage() {
             }
           }
           
-          // Use tags from article if available
-          if ((articleData as any).tags) {
-            setTags((articleData as any).tags);
+          // Set tags from article data
+          if (articleData.tags) {
+            setTags(articleData.tags);
           } else {
-            // Fetch tags manually if not included in article
+            // Fetch tags separately if not included in article
             try {
               const tagData = await ArticleService.getArticleTags(articleId);
               setTags(tagData);
@@ -79,14 +89,27 @@ export default function ArticleDetailPage() {
 
   const handleLike = async () => {
     try {
-      await ArticleService.toggleLike(articleId);
-      // Update the article with new like count
-      const updatedArticle = await ArticleService.getById(articleId);
+      const updatedArticle = await ArticleService.toggleLike(articleId) as ArticleWithTags;
       if (updatedArticle) {
         setArticle(updatedArticle);
       }
     } catch (err) {
       console.error("Error liking article:", err);
+    }
+  };
+
+  const formatDate = (d?: string | null) => {
+    if (!d) return '-';
+    try {
+      return new Date(d).toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return d;
     }
   };
 
@@ -115,13 +138,13 @@ export default function ArticleDetailPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Detail Artikel"
+        title={article.title?.[activeTab] || "Detail Artikel"}
         backUrl="/article"
         actions={
           <div className="flex gap-2">
             <Button 
               variant="outline" 
-              onClick={() => router.back()}
+              onClick={() => router.push('/article')}
               icon={<ArrowLeft size={16} />}
             >
               Kembali
@@ -137,247 +160,188 @@ export default function ArticleDetailPage() {
         }
       />
 
-      <DetailView>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Main content - 2/3 width */}
-          <div className="md:col-span-2 space-y-6">
-            {/* Article title and content */}
-            <FormSection title="Konten Artikel">
-              <div className="space-y-6">
-                {/* Title */}
-                <div>
-                  <h2 className="text-2xl font-bold mb-2">{article.title?.id || "-"}</h2>
-                  {article.title?.en && article.title.id !== article.title.en && (
-                    <h3 className="text-xl text-muted-foreground">{article.title.en}</h3>
-                  )}
+      {/* Language Tabs */}
+      <div className="flex border-b border-gray-200">
+        {(['id', 'en'] as Lang[]).map(lang => (
+          <button
+            key={lang}
+            type="button"
+            onClick={() => setActiveTab(lang)}
+            className={`py-2 px-4 ${
+              activeTab === lang ? 'border-b-2 border-primary font-medium' : 'text-muted-foreground'
+            }`}
+          >
+            {lang === 'id' ? 'Bahasa Indonesia' : 'English'}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Main content - 2/3 width */}
+        <div className="md:col-span-2 space-y-6">
+          <DetailView title="Konten Artikel">
+            <div className="space-y-6">
+              {/* Image */}
+              {article.image && (
+                <div className="rounded-lg overflow-hidden">
+                  <img 
+                    src={article.image} 
+                    alt={article.title?.[activeTab] || "Article image"} 
+                    className="w-full object-cover h-64"
+                  />
                 </div>
-                
-                {/* Image */}
-                {article.image && (
-                  <div className="rounded-lg overflow-hidden">
-                    <img 
-                      src={article.image} 
-                      alt={article.title?.id || "Article image"} 
-                      className="w-full object-cover h-64"
-                    />
-                  </div>
-                )}
-                
-                {/* Preview Description */}
-                <div className="border-l-4 border-primary pl-4 italic">
-                  <div dangerouslySetInnerHTML={{ __html: article.preview_description?.id || "-" }} />
-                  {article.preview_description?.en && article.preview_description.id !== article.preview_description.en && (
-                    <div className="text-muted-foreground mt-2" dangerouslySetInnerHTML={{ __html: article.preview_description.en }} />
-                  )}
-                </div>
-                
-                {/* Content tabs - ID and EN */}
-                <div className="space-y-4">
-                  <div className="flex border-b border-gray-200">
-                    <button
-                      className="py-2 px-4 border-b-2 border-primary font-medium"
-                    >
-                      Bahasa Indonesia
-                    </button>
-                  </div>
-                  
-                  <div className="prose dark:prose-invert max-w-none">
-                    <div dangerouslySetInnerHTML={{ __html: article.description?.id || "-" }} />
-                  </div>
-                  
-                  {article.description?.en && article.description.id !== article.description.en && (
-                    <>
-                      <div className="flex border-b border-gray-200 mt-8">
-                        <button
-                          className="py-2 px-4 border-b-2 border-primary font-medium"
-                        >
-                          English
-                        </button>
-                      </div>
-                      
-                      <div className="prose dark:prose-invert max-w-none">
-                        <div dangerouslySetInnerHTML={{ __html: article.description.en || "-" }} />
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </FormSection>
-            
-            {/* SEO Info */}
-            <FormSection title="SEO & Metadata">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h4 className="text-sm font-medium mb-1">Slug URL</h4>
-                  <p className="text-sm text-muted-foreground">{article.slug || "-"}</p>
-                </div>
-                
-                <div>
-                  <h4 className="text-sm font-medium mb-1">Meta Title</h4>
-                  <p className="text-sm text-muted-foreground">{article.meta_title || "-"}</p>
-                </div>
-                
-                <div className="md:col-span-2">
-                  <h4 className="text-sm font-medium mb-1">Meta Description</h4>
-                  <p className="text-sm text-muted-foreground">{article.meta_description || "-"}</p>
-                </div>
-                
-                <div className="md:col-span-2">
-                  <h4 className="text-sm font-medium mb-1">Canonical URL</h4>
-                  <p className="text-sm text-muted-foreground">{article.canonical_url || "-"}</p>
-                </div>
-                
-                <div>
-                  <h4 className="text-sm font-medium mb-1">OG Title</h4>
-                  <p className="text-sm text-muted-foreground">{article.og_title || "-"}</p>
-                </div>
-                
-                <div className="md:col-span-2">
-                  <h4 className="text-sm font-medium mb-1">OG Description</h4>
-                  <p className="text-sm text-muted-foreground">{article.og_description || "-"}</p>
-                </div>
-                
-                <div className="md:col-span-2">
-                  <h4 className="text-sm font-medium mb-1">OG Image URL</h4>
-                  <p className="text-sm text-muted-foreground">{article.og_image || "-"}</p>
-                </div>
-              </div>
-            </FormSection>
-          </div>
+              )}
+              
+              {/* Preview Description */}
+              <DetailItem label="Preview">
+                <div className="prose max-w-none" dangerouslySetInnerHTML={{ 
+                  __html: article.preview_description?.[activeTab] || 
+                    "<i className='text-muted-foreground'>Tidak tersedia</i>" 
+                }} />
+              </DetailItem>
+              
+              {/* Content */}
+              <DetailItem label="Konten">
+                <div className="prose max-w-none" dangerouslySetInnerHTML={{ 
+                  __html: article.description?.[activeTab] || 
+                    "<i className='text-muted-foreground'>Tidak tersedia</i>" 
+                }} />
+              </DetailItem>
+            </div>
+          </DetailView>
           
-          {/* Sidebar - 1/3 width */}
-          <div className="space-y-6">
-            {/* Article metadata */}
-            <FormSection title="Metadata">
-              <div className="space-y-4">
-                <div>
-                  <h4 className="text-sm font-medium mb-1">Status</h4>
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      article.is_active
-                        ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                        : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                    }`}
-                  >
-                    {article.is_active ? "Aktif" : "Tidak Aktif"}
-                  </span>
-                </div>
-                
-                <div>
-                  <h4 className="text-sm font-medium mb-1">Jadwal Publikasi</h4>
-                  <p className="text-sm">
-                    {article.post_schedule 
-                      ? new Date(article.post_schedule).toLocaleDateString('id-ID', {
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric'
-                        })
-                      : "-"
-                    }
-                  </p>
-                </div>
-                
-                <div>
-                  <h4 className="text-sm font-medium mb-1">Kategori</h4>
-                  <p className="text-sm">
-                    {category 
-                      ? (category.title?.id || category.title?.en || `Kategori ${category.id}`)
-                      : (article.article_category_id || "-")
-                    }
-                  </p>
-                </div>
-                
-                <div>
-                  <h4 className="text-sm font-medium mb-1">Tags</h4>
-                  <div className="flex flex-wrap gap-1">
-                    {tags && tags.length > 0 
-                      ? tags.map((tag: any) => (
-                          <span 
-                            key={tag.id} 
-                            className="px-2 py-1 bg-gray-100 text-xs rounded-full dark:bg-gray-800"
-                          >
-                            {tag.title?.id || tag.title?.en || `Tag ${tag.id}`}
-                          </span>
-                        ))
-                      : "-"
-                    }
-                  </div>
-                </div>
-                
-                <div>
-                  <h4 className="text-sm font-medium mb-1">Tanggal Dibuat</h4>
-                  <p className="text-sm">
-                    {article.created_at 
-                      ? new Date(article.created_at).toLocaleDateString('id-ID', {
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })
-                      : "-"
-                    }
-                  </p>
-                </div>
-                
-                <div>
-                  <h4 className="text-sm font-medium mb-1">Terakhir Diperbarui</h4>
-                  <p className="text-sm">
-                    {article.updated_at 
-                      ? new Date(article.updated_at).toLocaleDateString('id-ID', {
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })
-                      : "-"
-                    }
-                  </p>
-                </div>
-              </div>
-            </FormSection>
-            
-            {/* Statistics */}
-            <FormSection title="Statistik">
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Eye size={18} />
-                  <div>
-                    <h4 className="text-sm font-medium">Total Views</h4>
-                    <p className="text-sm">{article.total_views || 0}</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <Clock size={18} />
-                  <div>
-                    <h4 className="text-sm font-medium">Waktu Baca Rata-Rata</h4>
-                    <p className="text-sm">{article.minute_read || 0} menit</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <ThumbsUp size={18} />
-                  <div>
-                    <h4 className="text-sm font-medium">Likes</h4>
-                    <p className="text-sm">{article.like || 0}</p>
-                  </div>
-                </div>
-                
-                <Button
-                  variant="outline"
-                  onClick={handleLike}
-                  icon={<ThumbsUp size={16} />}
-                  className="w-full"
-                >
-                  Tambah Like
-                </Button>
-              </div>
-            </FormSection>
-          </div>
+          {/* SEO Info */}
+          <DetailView title="SEO & Metadata">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <DetailItem label="Slug URL">
+                {article.slug || <i className="text-muted-foreground">Tidak tersedia</i>}
+              </DetailItem>
+              
+              <DetailItem label="Meta Title">
+                {article.meta_title || <i className="text-muted-foreground">Tidak tersedia</i>}
+              </DetailItem>
+              
+              <DetailItem label="Meta Description" className="md:col-span-2">
+                {article.meta_description || <i className="text-muted-foreground">Tidak tersedia</i>}
+              </DetailItem>
+              
+              <DetailItem label="Canonical URL" className="md:col-span-2">
+                {article.canonical_url || <i className="text-muted-foreground">Tidak tersedia</i>}
+              </DetailItem>
+              
+              <DetailItem label="OG Title">
+                {article.og_title || <i className="text-muted-foreground">Tidak tersedia</i>}
+              </DetailItem>
+              
+              <DetailItem label="OG Description" className="md:col-span-2">
+                {article.og_description || <i className="text-muted-foreground">Tidak tersedia</i>}
+              </DetailItem>
+              
+              <DetailItem label="OG Image URL" className="md:col-span-2">
+                {article.og_image ? (
+                  <a href={article.og_image} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+                    {article.og_image}
+                  </a>
+                ) : (
+                  <i className="text-muted-foreground">Tidak tersedia</i>
+                )}
+              </DetailItem>
+            </div>
+          </DetailView>
         </div>
-      </DetailView>
+        
+        {/* Sidebar - 1/3 width */}
+        <div className="space-y-6">
+          {/* Article metadata */}
+          <DetailView title="Informasi Artikel">
+            <DetailItem label="Status" icon={article.is_active ? 
+              <span className="w-2 h-2 bg-green-500 rounded-full"></span> : 
+              <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+            }>
+              <span
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  article.is_active
+                    ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                    : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                }`}
+              >
+                {article.is_active ? "Aktif" : "Tidak Aktif"}
+              </span>
+            </DetailItem>
+            
+            <DetailItem label="Jadwal Publikasi" icon={<Clock size={16} />}>
+              {formatDate(article.post_schedule)}
+            </DetailItem>
+            
+            <DetailItem label="Kategori">
+              {category 
+                ? (category.title?.[activeTab] || category.title?.id || `Kategori ${category.id}`)
+                : (article.article_category_id ? `Kategori ${article.article_category_id}` : "-")
+              }
+            </DetailItem>
+            
+            <DetailItem label="Tags">
+              <div className="flex flex-wrap gap-1">
+                {tags && tags.length > 0 
+                  ? tags.map((tag: any) => (
+                      <span 
+                        key={tag.id} 
+                        className="px-2 py-1 bg-muted text-xs rounded-full"
+                      >
+                        {tag.title?.[activeTab] || tag.title?.id || `Tag ${tag.id}`}
+                      </span>
+                    ))
+                  : <i className="text-muted-foreground">Tidak ada tag</i>
+                }
+              </div>
+            </DetailItem>
+          </DetailView>
+          
+          {/* Statistics */}
+          <DetailView title="Statistik">
+            <div className="space-y-4">
+              <DetailItem label="Total Views" icon={<Eye size={16} />}>
+                {article.total_views || 0}
+              </DetailItem>
+              
+              <DetailItem label="Waktu Baca" icon={<Clock size={16} />}>
+                {article.minute_read || 0} menit
+              </DetailItem>
+              
+              <DetailItem label="Likes" icon={<ThumbsUp size={16} />}>
+                {article.like || 0}
+              </DetailItem>
+              
+              <Button
+                variant="outline"
+                onClick={handleLike}
+                icon={<ThumbsUp size={16} />}
+                className="w-full"
+              >
+                Tambah Like
+              </Button>
+            </div>
+          </DetailView>
+          
+          {/* Metadata */}
+          <DetailView title="Metadata">
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">ID</span>
+                <span>{article.id}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Dibuat</span>
+                <span>{formatDate(article.created_at)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Diperbarui</span>
+                <span>{formatDate(article.updated_at)}</span>
+              </div>
+            </div>
+          </DetailView>
+        </div>
+      </div>
     </div>
   );
 }

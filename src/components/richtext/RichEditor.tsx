@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
@@ -130,6 +130,22 @@ export function RichTextEditor({
       },
     },
   });
+
+  useEffect(() => {
+    if (editor && value !== undefined) {
+      // Simpan state editor saat ini
+      const isFocused = editor.isFocused;
+      const selection = editor.state.selection;
+      
+      // Perbarui konten
+      editor.commands.setContent(value);
+      
+      // Kembalikan fokus jika sebelumnya sedang fokus
+      if (isFocused) {
+        editor.commands.focus();
+      }
+    }
+  }, [editor, language]); // Hapus value dari dependency untuk mencegah loop
 
   const setLink = () => {
     if (!editor) return;
