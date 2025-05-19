@@ -372,7 +372,7 @@ export default function CertificateEditPage() {
                   <div>
                     <ImageUpload
                       onChange={setImageFile}
-                      value={imageFile || currentImageUrl}
+                      value={imageFile}
                       maxSize={2}   
                       aspectRatio="wide"
                       label="Unggah Gambar Sertifikat"
