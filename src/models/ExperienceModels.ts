@@ -1,7 +1,6 @@
 export interface ExperienceCategory {
     id: number;
     title?: Record<string, any>;
-    slug: string;
     created_at?: string;
     updated_at?: string;
   }
@@ -15,6 +14,7 @@ export interface ExperienceCategory {
     location?: Record<string, any>;
     experience_long?: number;
     company_link?: string;
+    company_logo?: string;
     skill_id?: number;
     experience_category_id?: number;
     created_at?: string;

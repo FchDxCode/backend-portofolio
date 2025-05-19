@@ -53,20 +53,6 @@ export class ExperienceCategoryService {
 
   static async create(category: Omit<ExperienceCategory, 'id' | 'created_at' | 'updated_at'>): Promise<ExperienceCategory> {
     try {
-      if (!category.slug) {
-        category.slug = this.generateSlug(category.title?.en || '');
-      }
-
-      const { data: existing } = await supabase
-        .from(this.TABLE_NAME)
-        .select('slug')
-        .eq('slug', category.slug)
-        .single();
-
-      if (existing) {
-        throw new Error('Category with this slug already exists');
-      }
-
       const { data, error } = await supabase
         .from(this.TABLE_NAME)
         .insert({
@@ -87,19 +73,6 @@ export class ExperienceCategoryService {
 
   static async update(id: number, category: Partial<ExperienceCategory>): Promise<ExperienceCategory> {
     try {
-      if (category.slug) {
-        const { data: existing } = await supabase
-          .from(this.TABLE_NAME)
-          .select('slug')
-          .eq('slug', category.slug)
-          .neq('id', id)
-          .single();
-
-        if (existing) {
-          throw new Error('Category with this slug already exists');
-        }
-      }
-
       const { data, error } = await supabase
         .from(this.TABLE_NAME)
         .update({
@@ -130,12 +103,5 @@ export class ExperienceCategoryService {
       console.error('Error deleting experience category:', error);
       throw error;
     }
-  }
-
-  private static generateSlug(title: string): string {
-    return title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
   }
 }

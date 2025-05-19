@@ -117,6 +117,11 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           icon: <Package className="w-4 h-4" />, 
           href: "/callme-banner-item"
         },
+        { 
+          title: "Category Experience", 
+          icon: <Package className="w-4 h-4" />, 
+          href: "/category-experience"
+        },
       ]
     },
     {
