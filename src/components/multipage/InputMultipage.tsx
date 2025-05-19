@@ -6,6 +6,7 @@ interface InputMultipageProps {
   value: string | number;
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   label: string;
+  name?: string;
   placeholder?: string;
   language?: string;
   required?: boolean;
@@ -22,6 +23,7 @@ export function InputMultipage({
     value,
     onChange,
     label,
+    name,
     placeholder = "",
     language = "",
     required = false,
@@ -53,6 +55,7 @@ export function InputMultipage({
       
       {multiline ? (
         <textarea
+          name={name}
           value={value}
           onChange={onChange}
           className={inputClasses}
@@ -62,6 +65,7 @@ export function InputMultipage({
         />
       ) : (
         <input
+          name={name}
           type={type}
           value={value}
           onChange={onChange}

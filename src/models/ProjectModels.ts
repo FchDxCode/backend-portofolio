@@ -1,5 +1,6 @@
 export interface ProjectImage {
     id: number;
+    project_id: number;
     image?: string;
     created_at?: string;
     updated_at?: string;
@@ -10,8 +11,8 @@ export interface ProjectImage {
     title?: Record<string, any>;
     subtitle?: Record<string, any>;
     description?: Record<string, any>;
+    meta_title?: string;
     meta_description?: string;
-    meta_keyword?: string;
     skill_id?: number;
     image_id?: number;
     link_demo?: string;
