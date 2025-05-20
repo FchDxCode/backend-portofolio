@@ -94,7 +94,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           submenu: [
             { title: "brand", href: "/brand" },
             { title: "service benefit", href: "/service-benefit" },
-            { title: "Completed", href: "/dashboard/orders/completed" }
+            { title: "tech stack skill", href: "/tech-stack-skill" }
           ]
         },
         { 
