@@ -1,5 +1,3 @@
-'use server';
-
 import { createClient } from '@/src/utils/supabase/client';
 import { ServiceHero } from '@/src/models/ServiceModels';
 import { saveFile, deleteFile } from '@/src/utils/server/FileStorage';   
@@ -7,7 +5,7 @@ import { saveFile, deleteFile } from '@/src/utils/server/FileStorage';
 const supabase = createClient();
 
 export class ServiceHeroService {
-  private static TABLE = 'service_heroes';
+  private static TABLE = 'service_heros';
   private static FOLDER = 'service-icons';         
   private static MAX_SIZE = 5 * 1024 * 1024;       
 
