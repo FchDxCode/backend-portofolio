@@ -93,7 +93,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           badgeColor: "bg-emerald-500",
           submenu: [
             { title: "brand", href: "/brand" },
-            { title: "Pending", href: "/dashboard/orders/pending" },
+            { title: "service benefit", href: "/service-benefit" },
             { title: "Completed", href: "/dashboard/orders/completed" }
           ]
         },
