@@ -86,13 +86,13 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       title: "Business",
       items: [
         { 
-          title: "Orders", 
+          title: "Services", 
           icon: <ShoppingCart className="w-4 h-4" />, 
-          href: "/dashboard/orders", 
+          href: "/brand", 
           badge: "5", 
           badgeColor: "bg-emerald-500",
           submenu: [
-            { title: "All Orders", href: "/dashboard/orders" },
+            { title: "brand", href: "/brand" },
             { title: "Pending", href: "/dashboard/orders/pending" },
             { title: "Completed", href: "/dashboard/orders/completed" }
           ]
