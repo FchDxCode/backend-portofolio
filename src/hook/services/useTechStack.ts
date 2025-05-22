@@ -77,6 +77,10 @@ export const useTechStacks = (initialFilters?: TechStackFilters) => {
     }
   };
 
+  const getIconUrl = useCallback((path: string) => {
+    return TechStackService.getIconUrl(path);
+  }, []);
+
   useEffect(() => {
     fetchTechStacks();
   }, [fetchTechStacks]);
@@ -91,6 +95,6 @@ export const useTechStacks = (initialFilters?: TechStackFilters) => {
     updateTechStack,
     deleteTechStack,
     refreshTechStacks: fetchTechStacks,
-    getIconUrl: TechStackService.getIconUrl
+    getIconUrl
   };
 };

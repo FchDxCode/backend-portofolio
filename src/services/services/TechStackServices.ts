@@ -1,5 +1,4 @@
 // services/TechStackService.ts
-'use server';
 
 import { createClient } from '@/src/utils/supabase/client';
 import { TechStack } from '@/src/models/ServiceModels';

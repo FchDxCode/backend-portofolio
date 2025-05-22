@@ -1,5 +1,3 @@
-'use server';
-
 import { createClient } from '@/src/utils/supabase/client';
 import { Brand } from '@/src/models/ServiceModels';
 import {

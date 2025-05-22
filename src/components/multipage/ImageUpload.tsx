@@ -189,11 +189,16 @@ export function ImageUpload({
       {label && (
         <div className="text-sm font-medium text-foreground">{label}</div>
       )}
+      <div className="flex flex-col items-center justify-center h-max gap-2 w-max">
+            <p className="text-xs text-muted-foreground">
+                {description}
+              </p>
+            </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Preview images */}
         {previewUrls.map((url, index) => (
-          <div key={`img-${index}`} className="relative rounded-lg overflow-hidden border bg-muted/30">
+          <div key={`img-${index}`} className="relative rounded-lg overflow-hidden border bg-muted/30 w-40">
             <div className={`${previewSizeClass[previewSize]} ${aspectRatioClass[aspectRatio]} relative`}>
               <img 
                 src={url}
@@ -218,7 +223,7 @@ export function ImageUpload({
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+            className={`border-2 px-20 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
               isDragging 
                 ? 'border-primary bg-primary/5' 
                 : 'border-muted-foreground/25 hover:border-muted-foreground/50'
@@ -229,12 +234,9 @@ export function ImageUpload({
               <div className="p-2 rounded-full bg-primary/10 text-primary">
                 <Image className="h-5 w-5" />
               </div>
-              <div className="text-sm font-medium">
+              <div className="text-sm font-medium w-20">
                 <span className="text-primary">Klik untuk upload</span> atau drag and drop
               </div>
-              <p className="text-xs text-muted-foreground">
-                {description}
-              </p>
             </div>
             <input
               ref={fileInputRef}

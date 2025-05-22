@@ -5,15 +5,8 @@ export interface Brand {
     created_at?: string;
     updated_at?: string;
   }
-  
-  export interface ServiceBenefit {
-    id: number;
-    title?: Record<string, any>;
-    created_at?: string;
-    updated_at?: string;
-  }
-  
-  export interface ServiceHero {
+
+    export interface ServiceHero {
     id: number;
     title?: Record<string, any>;
     subtitle?: Record<string, any>;
@@ -22,19 +15,40 @@ export interface Brand {
     created_at?: string;
     updated_at?: string;
   }
-  
-  export interface FeaturedService {
+
+  export interface ServiceBenefit {
     id: number;
     title?: Record<string, any>;
-    preview_description?: Record<string, any>;
-    description?: Record<string, any>;
-    icon?: string;
-    benefit_id?: number;
-    skill_id?: number;
     created_at?: string;
     updated_at?: string;
   }
+
+
+// Featured Services
+  export interface FeaturedService {
+      id: number;
+      title?: Record<string, any>;
+      preview_description?: Record<string, any>;
+      description?: Record<string, any>;
+      icon?: string;
+      created_at?: string;
+      updated_at?: string;
+
+      benefits?: ServiceBenefit[];
+      skills?: TechStack[];
+  }
+
+  export interface FeaturedServiceBenefit {
+      featured_service_id: number; 
+      benefit_id: number;           
+  }
   
+  export interface FeaturedServiceSkill {
+      featured_service_id: number; 
+      skill_id: number;            
+  }
+  
+// Service Process
   export interface ServiceProcess {
     id: number;
     title?: Record<string, any>;
@@ -43,11 +57,23 @@ export interface Brand {
     icon?: string;
     order_no?: number;
     is_active?: boolean;
-    benefit_id?: number;
     created_at?: string;
     updated_at?: string;
   }
   
+  export interface ProcessActivity {
+    id: number;
+    title?: Record<string, any>;
+    created_at?: string;
+    updated_at?: string;
+  }
+  
+  export interface ServiceProcessActivityLink {
+    service_process_id: number;
+    process_activity_id: number;
+  }
+  
+// Tech Stack
   export interface TechStackSkill {
     id: number;
     title?: Record<string, any>;
@@ -64,6 +90,7 @@ export interface Brand {
     updated_at?: string;
   }
   
+// Package
   export interface PackageBenefit {
     id: number;
     title?: Record<string, any>;

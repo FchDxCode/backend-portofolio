@@ -129,7 +129,7 @@ export default function CertificateNewPage() {
     }
   };
 
-  return (
+    return (
     <div className="space-y-6">
       <PageHeader
         title="Tambah Sertifikat Baru"
