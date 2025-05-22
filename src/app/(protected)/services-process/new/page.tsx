@@ -16,14 +16,14 @@ import { useProcessActivity } from "@/src/hook/services/useProcessActivity";
 type FormData = {
   title: { id: string; en: string };
   description: { id: string; en: string };
-  work_duration: number;
+  work_duration: {id: string, en: string};
   is_active: boolean;
   icon: string;
   activityIds: number[];
 };
 
 // Define a type for fields that have language support
-type MultilingualFields = 'title' | 'description';
+type MultilingualFields = 'title' | 'description' | 'work_duration';
 
 export default function ServicesProcessNewPage() {
   const router = useRouter();
@@ -37,7 +37,7 @@ export default function ServicesProcessNewPage() {
   const [formData, setFormData] = useState<FormData>({
     title: { id: "", en: "" },
     description: { id: "", en: "" },
-    work_duration: 1,
+    work_duration: {id: "", en: ""},
     is_active: true,
     icon: "",
     activityIds: [],
@@ -54,7 +54,7 @@ export default function ServicesProcessNewPage() {
   const handleInputChange = (field: keyof FormData, value: any, lang?: "id" | "en") => {
     if (lang) {
       // Check if the field is a multilingual field
-      if (['title', 'description'].includes(field)) {
+      if (['title', 'description', 'work_duration'].includes(field)) {
         setFormData(prev => ({
           ...prev,
           [field]: {
@@ -131,7 +131,7 @@ export default function ServicesProcessNewPage() {
     label: activity.title?.id || activity.title?.en || `Activity ${activity.id}`
   }));
 
-  return (
+    return (
     <div className="space-y-6">
       <PageHeader
         title="Tambah Proses Layanan"
@@ -270,13 +270,11 @@ export default function ServicesProcessNewPage() {
                   {/* Duration */}
                   <div className="space-y-2">
                     <InputMultipage
-                      value={formData.work_duration.toString()}
-                      onChange={(e) => handleInputChange("work_duration", Number(e.target.value) || 1)}
-                      label="Durasi Pengerjaan (bulan)"
-                      type="number"
-                      min={1}
-                      placeholder="Masukkan durasi dalam bulan"
-                      helperText="Lama waktu pengerjaan dalam bulan"
+                      value={formData.work_duration[activeTab]}
+                      onChange={(e) => handleInputChange("work_duration", e.target.value, activeTab)}
+                      label={`Durasi Pengerjaan ${activeTab === "id" ? "(Indonesia)" : "(English)"}`}
+                      language={activeTab}
+                      placeholder={`Masukkan durasi dalam ${activeTab === "id" ? " Bahasa Indonesia" : "in English"}`}
                     />
                   </div>
                   

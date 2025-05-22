@@ -2,141 +2,138 @@ import { useState, useEffect, useCallback } from 'react';
 import { PackageExclusion } from '@/src/models/ServiceModels';
 import { PackageExclusionService } from '@/src/services/services/PackageExclusionServices';
 
-interface ExclusionFilters {
-  search?: string;
-  sort?: 'created_at' | 'title';
-  order?: 'asc' | 'desc';
+interface UsePackageExclusionOptions {
+  initialPackagePricingId?: number;
 }
 
-export const usePackageExclusions = (initialFilters?: ExclusionFilters) => {
+export function usePackageExclusion(options?: UsePackageExclusionOptions) {
   const [exclusions, setExclusions] = useState<PackageExclusion[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [selectedExclusions, setSelectedExclusions] = useState<PackageExclusion[]>([]);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const [filters, setFilters] = useState<ExclusionFilters>(initialFilters || {});
 
-  const fetchExclusions = useCallback(async () => {
+  // Ambil semua exclusion
+  const fetchExclusions = useCallback(async (params?: {
+    search?: string;
+    packagePricingId?: number;
+    sort?: 'created_at';
+    order?: 'asc' | 'desc';
+  }) => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      const data = await PackageExclusionService.getAll(filters);
+      const data = await PackageExclusionService.getAll(params);
       setExclusions(data);
-      setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
+      console.error('Error fetching exclusions:', err);
+      setError(err instanceof Error ? err : new Error('Gagal mengambil data exclusion'));
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, []);
 
-  const createExclusion = async (
-    exclusion: Omit<PackageExclusion, 'id' | 'created_at' | 'updated_at'>
-  ) => {
+  // Ambil exclusion untuk package pricing tertentu
+  const fetchExclusionsByPackagePricing = useCallback(async (packagePricingId: number) => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
+      const data = await PackageExclusionService.getByPackagePricingId(packagePricingId);
+      setSelectedExclusions(data);
+    } catch (err) {
+      console.error(`Error fetching exclusions for package pricing ${packagePricingId}:`, err);
+      setError(err instanceof Error ? err : new Error('Gagal mengambil data exclusion untuk paket ini'));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Buat exclusion baru
+  const createExclusion = useCallback(async (exclusion: Omit<PackageExclusion, 'id' | 'created_at' | 'updated_at'>) => {
+    setLoading(true);
+    setError(null);
+    try {
       const newExclusion = await PackageExclusionService.create(exclusion);
-      setExclusions(prev => [newExclusion, ...prev]);
+      setExclusions(prev => [...prev, newExclusion]);
       return newExclusion;
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
+      console.error('Error creating exclusion:', err);
+      setError(err instanceof Error ? err : new Error('Gagal membuat exclusion baru'));
       throw err;
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const updateExclusion = async (
-    id: number,
-    exclusion: Partial<PackageExclusion>
-  ) => {
+  // Update exclusion
+  const updateExclusion = useCallback(async (id: number, exclusion: Partial<PackageExclusion>) => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
       const updatedExclusion = await PackageExclusionService.update(id, exclusion);
       setExclusions(prev => prev.map(e => e.id === id ? updatedExclusion : e));
+      setSelectedExclusions(prev => prev.map(e => e.id === id ? updatedExclusion : e));
       return updatedExclusion;
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
+      console.error(`Error updating exclusion ${id}:`, err);
+      setError(err instanceof Error ? err : new Error('Gagal mengupdate exclusion'));
       throw err;
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const deleteExclusion = async (id: number) => {
+  // Hapus exclusion
+  const deleteExclusion = useCallback(async (id: number) => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
       await PackageExclusionService.delete(id);
       setExclusions(prev => prev.filter(e => e.id !== id));
+      setSelectedExclusions(prev => prev.filter(e => e.id !== id));
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
+      console.error(`Error deleting exclusion ${id}:`, err);
+      setError(err instanceof Error ? err : new Error('Gagal menghapus exclusion'));
       throw err;
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const bulkCreateExclusions = async (
-    exclusionsData: Omit<PackageExclusion, 'id' | 'created_at' | 'updated_at'>[]
-  ) => {
+  // Link exclusion ke package pricing
+  const linkToPackagePricing = useCallback(async (packagePricingId: number, exclusionIds: number[]) => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      const newExclusions = await PackageExclusionService.bulkCreate(exclusionsData);
-      setExclusions(prev => [...newExclusions, ...prev]);
-      return newExclusions;
+      await PackageExclusionService.linkToPackagePricing(packagePricingId, exclusionIds);
+      // Refresh selected exclusions
+      fetchExclusionsByPackagePricing(packagePricingId);
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
+      console.error(`Error linking exclusions to package pricing ${packagePricingId}:`, err);
+      setError(err instanceof Error ? err : new Error('Gagal menghubungkan exclusion ke paket'));
       throw err;
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchExclusionsByPackagePricing]);
 
-  const bulkUpdateExclusions = async (
-    updates: { id: number; data: Partial<PackageExclusion> }[]
-  ) => {
-    try {
-      setLoading(true);
-      const updatedExclusions = await PackageExclusionService.bulkUpdate(updates);
-      setExclusions(prev => {
-        const updated = new Map(updatedExclusions.map(e => [e.id, e]));
-        return prev.map(e => updated.get(e.id) || e);
-      });
-      return updatedExclusions;
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const bulkDeleteExclusions = async (ids: number[]) => {
-    try {
-      setLoading(true);
-      await PackageExclusionService.bulkDelete(ids);
-      setExclusions(prev => prev.filter(e => !ids.includes(e.id)));
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Load data saat komponen di-mount
   useEffect(() => {
     fetchExclusions();
-  }, [fetchExclusions]);
+    if (options?.initialPackagePricingId) {
+      fetchExclusionsByPackagePricing(options.initialPackagePricingId);
+    }
+  }, [fetchExclusions, fetchExclusionsByPackagePricing, options?.initialPackagePricingId]);
 
   return {
     exclusions,
+    selectedExclusions,
     loading,
     error,
-    filters,
-    setFilters,
+    fetchExclusions,
+    fetchExclusionsByPackagePricing,
     createExclusion,
     updateExclusion,
     deleteExclusion,
-    bulkCreateExclusions,
-    bulkUpdateExclusions,
-    bulkDeleteExclusions,
-    refreshExclusions: fetchExclusions
+    linkToPackagePricing
   };
-};
+}

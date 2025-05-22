@@ -140,7 +140,7 @@ export default function FeaturedServicesNewPage() {
     value: skill.id,
   }));
 
-  return (
+    return (
     <div className="space-y-6">
       <PageHeader
         title="Tambah Layanan Unggulan"

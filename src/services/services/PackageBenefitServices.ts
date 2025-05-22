@@ -5,30 +5,52 @@ const supabase = createClient();
 
 export class PackageBenefitService {
   private static TABLE_NAME = 'package_benefits';
+  private static JUNCTION_TABLE = 'package_pricing_benefits';
 
   static async getAll(params?: {
     search?: string;
-    sort?: 'created_at' | 'title';
+    packagePricingId?: number;
+    sort?: 'created_at';
     order?: 'asc' | 'desc';
   }): Promise<PackageBenefit[]> {
     try {
-      let query = supabase
-        .from(this.TABLE_NAME)
-        .select('*');
+      let query = supabase.from(this.TABLE_NAME).select('*');
 
+      // Filter berdasarkan pencarian
       if (params?.search) {
-        query = query.or(`title->en.ilike.%${params.search}%,title->id.ilike.%${params.search}%,slug.ilike.%${params.search}%`);
+        query = query.or(`
+          title->en.ilike.%${params.search}%,
+          title->id.ilike.%${params.search}%
+        `);
       }
 
+      // Sorting
       if (params?.sort) {
-        query = query.order(params.sort, { ascending: params.order === 'asc' });
+        query = query.order(params.sort, { ascending: params?.order === 'asc' });
       } else {
         query = query.order('created_at', { ascending: false });
       }
 
       const { data, error } = await query;
       if (error) throw error;
-      return data || [];
+
+      // Jika tidak ada filter package pricing, kembalikan semua benefit
+      if (!params?.packagePricingId) {
+        return data || [];
+      }
+
+      // Jika ada filter packagePricingId, ambil benefit melalui junction table
+      const { data: junctionData, error: junctionError } = await supabase
+        .from(this.JUNCTION_TABLE)
+        .select('package_benefit_id')
+        .eq('package_pricing_id', params.packagePricingId);
+
+      if (junctionError) throw junctionError;
+      if (!junctionData || junctionData.length === 0) return [];
+
+      // Filter benefit berdasarkan junction data
+      const benefitIds = junctionData.map(j => j.package_benefit_id);
+      return data?.filter(benefit => benefitIds.includes(benefit.id)) || [];
     } catch (error) {
       console.error('Error fetching package benefits:', error);
       throw error;
@@ -46,26 +68,21 @@ export class PackageBenefitService {
       if (error) throw error;
       return data;
     } catch (error) {
-      console.error('Error fetching package benefit:', error);
+      console.error(`Error fetching package benefit with ID ${id}:`, error);
       throw error;
     }
   }
 
-  static async create(
-    benefit: Omit<PackageBenefit, 'id' | 'created_at' | 'updated_at'>
-  ): Promise<PackageBenefit> {
+  static async create(benefit: Omit<PackageBenefit, 'id' | 'created_at' | 'updated_at'>): Promise<PackageBenefit> {
     try {
-      const benefitData = {
-        ...benefit,
-        slug: benefit.slug || this.generateSlug(benefit.title?.en || '')
-      };
-
+      const now = new Date().toISOString();
+      
       const { data, error } = await supabase
         .from(this.TABLE_NAME)
         .insert({
-          ...benefitData,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          ...benefit,
+          created_at: now,
+          updated_at: now
         })
         .select()
         .single();
@@ -78,23 +95,14 @@ export class PackageBenefitService {
     }
   }
 
-  static async update(
-    id: number,
-    benefit: Partial<PackageBenefit>
-  ): Promise<PackageBenefit> {
+  static async update(id: number, benefit: Partial<PackageBenefit>): Promise<PackageBenefit> {
     try {
-      const updateData: Partial<PackageBenefit> = {
-        ...benefit,
-        updated_at: new Date().toISOString()
-      };
-
-      if (benefit.title?.en && !benefit.slug) {
-        updateData.slug = this.generateSlug(benefit.title.en);
-      }
-
       const { data, error } = await supabase
         .from(this.TABLE_NAME)
-        .update(updateData)
+        .update({
+          ...benefit,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', id)
         .select()
         .single();
@@ -102,22 +110,22 @@ export class PackageBenefitService {
       if (error) throw error;
       return data;
     } catch (error) {
-      console.error('Error updating package benefit:', error);
+      console.error(`Error updating package benefit with ID ${id}:`, error);
       throw error;
     }
   }
 
   static async delete(id: number): Promise<void> {
     try {
-      const { count: pricingCount } = await supabase
-        .from('package_pricing')
-        .select('*', { count: 'exact' })
-        .eq('benefit_id', id);
+      // Hapus dulu relasi di junction table
+      const { error: junctionError } = await supabase
+        .from(this.JUNCTION_TABLE)
+        .delete()
+        .eq('package_benefit_id', id);
 
-      if (pricingCount && pricingCount > 0) {
-        throw new Error('Cannot delete: This benefit is being used in package pricing');
-      }
+      if (junctionError) throw junctionError;
 
+      // Hapus benefit
       const { error } = await supabase
         .from(this.TABLE_NAME)
         .delete()
@@ -125,80 +133,75 @@ export class PackageBenefitService {
 
       if (error) throw error;
     } catch (error) {
-      console.error('Error deleting package benefit:', error);
+      console.error(`Error deleting package benefit with ID ${id}:`, error);
       throw error;
     }
   }
 
-  static async bulkCreate(
-    benefits: Omit<PackageBenefit, 'id' | 'created_at' | 'updated_at'>[]
-  ): Promise<PackageBenefit[]> {
+  static async getByPackagePricingId(packagePricingId: number): Promise<PackageBenefit[]> {
     try {
-      const benefitsData = benefits.map(benefit => ({
-        ...benefit,
-        slug: benefit.slug || this.generateSlug(benefit.title?.en || ''),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }));
+      // Ambil ID benefit dari junction table
+      const { data: junctionData, error: junctionError } = await supabase
+        .from(this.JUNCTION_TABLE)
+        .select('package_benefit_id')
+        .eq('package_pricing_id', packagePricingId);
 
+      if (junctionError) throw junctionError;
+      if (!junctionData || junctionData.length === 0) return [];
+
+      // Ambil detail benefit
+      const benefitIds = junctionData.map(j => j.package_benefit_id);
       const { data, error } = await supabase
         .from(this.TABLE_NAME)
-        .insert(benefitsData)
-        .select();
+        .select('*')
+        .in('id', benefitIds);
 
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('Error bulk creating package benefits:', error);
+      console.error(`Error fetching benefits for package pricing ${packagePricingId}:`, error);
       throw error;
     }
   }
 
-  static async bulkUpdate(
-    updates: { id: number; data: Partial<PackageBenefit> }[]
-  ): Promise<PackageBenefit[]> {
+  static async linkToPackagePricing(packagePricingId: number, benefitIds: number[]): Promise<void> {
     try {
-      const updatePromises = updates.map(({ id, data }) => 
-        this.update(id, data)
-      );
+      // Validasi dulu semua ID benefit
+      const { data: existingBenefits, error: validationError } = await supabase
+        .from(this.TABLE_NAME)
+        .select('id')
+        .in('id', benefitIds);
 
-      const results = await Promise.all(updatePromises);
-      return results;
-    } catch (error) {
-      console.error('Error bulk updating package benefits:', error);
-      throw error;
-    }
-  }
-
-  static async bulkDelete(ids: number[]): Promise<void> {
-    try {
-      const { count: pricingCount } = await supabase
-        .from('package_pricing')
-        .select('*', { count: 'exact' })
-        .in('benefit_id', ids);
-
-      if (pricingCount && pricingCount > 0) {
-        throw new Error('Cannot delete: Some benefits are being used in package pricing');
+      if (validationError) throw validationError;
+      
+      // Pastikan semua benefit valid
+      if (existingBenefits?.length !== benefitIds.length) {
+        throw new Error(`Some benefit IDs do not exist: ${benefitIds.join(', ')}`);
       }
 
-      const { error } = await supabase
-        .from(this.TABLE_NAME)
+      // Hapus dulu relasi yang ada
+      const { error: deleteError } = await supabase
+        .from(this.JUNCTION_TABLE)
         .delete()
-        .in('id', ids);
+        .eq('package_pricing_id', packagePricingId);
 
-      if (error) throw error;
+      if (deleteError) throw deleteError;
+
+      // Buat array relasi baru
+      const junctionRecords = benefitIds.map(benefitId => ({
+        package_pricing_id: packagePricingId,
+        package_benefit_id: benefitId
+      }));
+
+      // Insert relasi baru
+      const { error: insertError } = await supabase
+        .from(this.JUNCTION_TABLE)
+        .insert(junctionRecords);
+
+      if (insertError) throw insertError;
     } catch (error) {
-      console.error('Error bulk deleting package benefits:', error);
+      console.error(`Error linking benefits to package pricing ${packagePricingId}:`, error);
       throw error;
     }
-  }
-
-  private static generateSlug(text: string): string {
-    return text
-      .toLowerCase()
-      .replace(/[^\w\s-]/g, '')  
-      .replace(/\s+/g, '-')      
-      .replace(/-+/g, '-')      
-      .trim();
   }
 }

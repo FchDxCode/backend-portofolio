@@ -1,5 +1,3 @@
-'use server';
-
 import { createClient } from '@/src/utils/supabase/client';
 import { PromiseItem } from '@/src/models/ServiceModels';
 import { saveFile, deleteFile } from '@/src/utils/server/FileStorage';  
@@ -7,7 +5,7 @@ import { saveFile, deleteFile } from '@/src/utils/server/FileStorage';
 const supabase = createClient();
 
 export class PromiseItemService {
-  private static TABLE = 'promise_items';
+  private static TABLE = 'promises';
   private static FOLDER = 'promise-icons';        
   private static MAX_SIZE = 5 * 1024 * 1024;       
 
@@ -137,7 +135,7 @@ export class PromiseItemService {
   }
 
   static getIconUrl(path: string) {
-    if (this.isValidIconClass(path)) return path;
+    if (PromiseItemService.isValidIconClass(path)) return path;
     return /^https?:\/\//i.test(path) ? path : path.startsWith('/') ? path : `/${path}`;
   }
 }

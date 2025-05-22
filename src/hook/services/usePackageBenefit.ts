@@ -2,141 +2,138 @@ import { useState, useEffect, useCallback } from 'react';
 import { PackageBenefit } from '@/src/models/ServiceModels';
 import { PackageBenefitService } from '@/src/services/services/PackageBenefitServices';
 
-interface BenefitFilters {
-  search?: string;
-  sort?: 'created_at' | 'title';
-  order?: 'asc' | 'desc';
+interface UsePackageBenefitOptions {
+  initialPackagePricingId?: number;
 }
 
-export const usePackageBenefits = (initialFilters?: BenefitFilters) => {
+export function usePackageBenefit(options?: UsePackageBenefitOptions) {
   const [benefits, setBenefits] = useState<PackageBenefit[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [selectedBenefits, setSelectedBenefits] = useState<PackageBenefit[]>([]);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const [filters, setFilters] = useState<BenefitFilters>(initialFilters || {});
 
-  const fetchBenefits = useCallback(async () => {
+  // Ambil semua benefit
+  const fetchBenefits = useCallback(async (params?: {
+    search?: string;
+    packagePricingId?: number;
+    sort?: 'created_at';
+    order?: 'asc' | 'desc';
+  }) => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      const data = await PackageBenefitService.getAll(filters);
+      const data = await PackageBenefitService.getAll(params);
       setBenefits(data);
-      setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
+      console.error('Error fetching benefits:', err);
+      setError(err instanceof Error ? err : new Error('Gagal mengambil data benefit'));
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, []);
 
-  const createBenefit = async (
-    benefit: Omit<PackageBenefit, 'id' | 'created_at' | 'updated_at'>
-  ) => {
+  // Ambil benefit untuk package pricing tertentu
+  const fetchBenefitsByPackagePricing = useCallback(async (packagePricingId: number) => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
+      const data = await PackageBenefitService.getByPackagePricingId(packagePricingId);
+      setSelectedBenefits(data);
+    } catch (err) {
+      console.error(`Error fetching benefits for package pricing ${packagePricingId}:`, err);
+      setError(err instanceof Error ? err : new Error('Gagal mengambil data benefit untuk paket ini'));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Buat benefit baru
+  const createBenefit = useCallback(async (benefit: Omit<PackageBenefit, 'id' | 'created_at' | 'updated_at'>) => {
+    setLoading(true);
+    setError(null);
+    try {
       const newBenefit = await PackageBenefitService.create(benefit);
-      setBenefits(prev => [newBenefit, ...prev]);
+      setBenefits(prev => [...prev, newBenefit]);
       return newBenefit;
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
+      console.error('Error creating benefit:', err);
+      setError(err instanceof Error ? err : new Error('Gagal membuat benefit baru'));
       throw err;
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const updateBenefit = async (
-    id: number,
-    benefit: Partial<PackageBenefit>
-  ) => {
+  // Update benefit
+  const updateBenefit = useCallback(async (id: number, benefit: Partial<PackageBenefit>) => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
       const updatedBenefit = await PackageBenefitService.update(id, benefit);
       setBenefits(prev => prev.map(b => b.id === id ? updatedBenefit : b));
+      setSelectedBenefits(prev => prev.map(b => b.id === id ? updatedBenefit : b));
       return updatedBenefit;
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
+      console.error(`Error updating benefit ${id}:`, err);
+      setError(err instanceof Error ? err : new Error('Gagal mengupdate benefit'));
       throw err;
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const deleteBenefit = async (id: number) => {
+  // Hapus benefit
+  const deleteBenefit = useCallback(async (id: number) => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
       await PackageBenefitService.delete(id);
       setBenefits(prev => prev.filter(b => b.id !== id));
+      setSelectedBenefits(prev => prev.filter(b => b.id !== id));
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
+      console.error(`Error deleting benefit ${id}:`, err);
+      setError(err instanceof Error ? err : new Error('Gagal menghapus benefit'));
       throw err;
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const bulkCreateBenefits = async (
-    benefitsData: Omit<PackageBenefit, 'id' | 'created_at' | 'updated_at'>[]
-  ) => {
+  // Link benefit ke package pricing
+  const linkToPackagePricing = useCallback(async (packagePricingId: number, benefitIds: number[]) => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      const newBenefits = await PackageBenefitService.bulkCreate(benefitsData);
-      setBenefits(prev => [...newBenefits, ...prev]);
-      return newBenefits;
+      await PackageBenefitService.linkToPackagePricing(packagePricingId, benefitIds);
+      // Refresh selected benefits
+      fetchBenefitsByPackagePricing(packagePricingId);
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
+      console.error(`Error linking benefits to package pricing ${packagePricingId}:`, err);
+      setError(err instanceof Error ? err : new Error('Gagal menghubungkan benefit ke paket'));
       throw err;
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchBenefitsByPackagePricing]);
 
-  const bulkUpdateBenefits = async (
-    updates: { id: number; data: Partial<PackageBenefit> }[]
-  ) => {
-    try {
-      setLoading(true);
-      const updatedBenefits = await PackageBenefitService.bulkUpdate(updates);
-      setBenefits(prev => {
-        const updated = new Map(updatedBenefits.map(b => [b.id, b]));
-        return prev.map(b => updated.get(b.id) || b);
-      });
-      return updatedBenefits;
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const bulkDeleteBenefits = async (ids: number[]) => {
-    try {
-      setLoading(true);
-      await PackageBenefitService.bulkDelete(ids);
-      setBenefits(prev => prev.filter(b => !ids.includes(b.id)));
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Load data saat komponen di-mount
   useEffect(() => {
     fetchBenefits();
-  }, [fetchBenefits]);
+    if (options?.initialPackagePricingId) {
+      fetchBenefitsByPackagePricing(options.initialPackagePricingId);
+    }
+  }, [fetchBenefits, fetchBenefitsByPackagePricing, options?.initialPackagePricingId]);
 
   return {
     benefits,
+    selectedBenefits,
     loading,
     error,
-    filters,
-    setFilters,
+    fetchBenefits,
+    fetchBenefitsByPackagePricing,
     createBenefit,
     updateBenefit,
     deleteBenefit,
-    bulkCreateBenefits,
-    bulkUpdateBenefits,
-    bulkDeleteBenefits,
-    refreshBenefits: fetchBenefits
+    linkToPackagePricing
   };
-};
+}

@@ -1,70 +1,110 @@
 import { createClient } from "@/src/utils/supabase/client";
 import { PackagePricing } from "@/src/models/ServiceModels";
+import { PackageBenefitService } from "@/src/services/services/PackageBenefitServices";
+import { PackageExclusionService } from "@/src/services/services/PackageExclusionServices";
 
 const supabase = createClient();
 
 export class PackagePricingService {
-  private static TABLE_NAME = 'package_pricing';
+  private static TABLE_NAME = 'package_pricings';
+  private static BENEFIT_JUNCTION_TABLE = 'package_pricing_benefits';
+  private static EXCLUSION_JUNCTION_TABLE = 'package_pricing_exclusions';
 
   static async getAll(params?: {
     search?: string;
     benefitId?: number;
     exclusionId?: number;
-    sort?: 'price' | 'work_duration' | 'created_at';
+    sort?: 'created_at';
     order?: 'asc' | 'desc';
     withRelations?: boolean;
   }): Promise<PackagePricing[]> {
     try {
       let query = supabase.from(this.TABLE_NAME).select('*');
 
+      // Filter berdasarkan pencarian
       if (params?.search) {
         query = query.or(`
           title->en.ilike.%${params.search}%,
           title->id.ilike.%${params.search}%,
           description->en.ilike.%${params.search}%,
-          description->id.ilike.%${params.search}%,
-          tag.ilike.%${params.search}%
+          description->id.ilike.%${params.search}%
         `);
       }
 
-      if (params?.benefitId) {
-        query = query.eq('benefit_id', params.benefitId);
-      }
-
-      if (params?.exclusionId) {
-        query = query.eq('exclusion_id', params.exclusionId);
-      }
-
-      if (params?.sort) {
-        query = query.order(params.sort, { ascending: params.order === 'asc' });
-      } else {
-        query = query.order('created_at', { ascending: false });
-      }
+      // Sorting - hanya created_at
+      const sortField = 'created_at';
+      const isAscending = params?.order === 'asc';
+      
+      query = query.order(sortField, { ascending: isAscending });
 
       const { data, error } = await query;
-      if (error) throw error;
-      
-      if (!params?.withRelations || !data?.length) {
-        return data || [];
+      if (error) {
+        console.error('Supabase query error:', error);
+        throw error;
       }
-      
-      const pricingWithRelations = await Promise.all(data.map(async (pricing) => {
+
+      let filteredData = data || [];
+
+      // Filter berdasarkan benefit ID jika ada
+      if (params?.benefitId) {
+        // Ambil package pricing IDs yang terkait dengan benefit ID ini
+        const { data: benefitJunctions, error: benefitError } = await supabase
+          .from(this.BENEFIT_JUNCTION_TABLE)
+          .select('package_pricing_id')
+          .eq('package_benefit_id', params.benefitId);
+
+        if (benefitError) throw benefitError;
+        if (!benefitJunctions || benefitJunctions.length === 0) return [];
+
+        // Filter package pricing yang memiliki relasi dengan benefit
+        const pricingIds = benefitJunctions.map(j => j.package_pricing_id);
+        filteredData = filteredData.filter(pricing => pricingIds.includes(pricing.id));
+      }
+
+      // Filter berdasarkan exclusion ID jika ada
+      if (params?.exclusionId) {
+        // Ambil package pricing IDs yang terkait dengan exclusion ID ini
+        const { data: exclusionJunctions, error: exclusionError } = await supabase
+          .from(this.EXCLUSION_JUNCTION_TABLE)
+          .select('package_pricing_id')
+          .eq('package_exclusion_id', params.exclusionId);
+
+        if (exclusionError) throw exclusionError;
+        if (!exclusionJunctions || exclusionJunctions.length === 0) return [];
+
+        // Filter package pricing yang memiliki relasi dengan exclusion
+        const pricingIds = exclusionJunctions.map(j => j.package_pricing_id);
+        filteredData = filteredData.filter(pricing => pricingIds.includes(pricing.id));
+      }
+
+      // Jika tidak perlu relasi, kembalikan data yang sudah difilter
+      if (!params?.withRelations) {
+        return filteredData;
+      }
+
+      // Ambil relasi untuk setiap package pricing
+      const pricingWithRelations = await Promise.all(filteredData.map(async (pricing) => {
         const [benefits, exclusions] = await Promise.all([
-          pricing.benefit_id ? this.getBenefits(pricing.benefit_id) : null,
-          pricing.exclusion_id ? this.getExclusions(pricing.exclusion_id) : null
+          PackageBenefitService.getByPackagePricingId(pricing.id),
+          PackageExclusionService.getByPackagePricingId(pricing.id)
         ]);
-        
+
         return {
           ...pricing,
-          package_benefits: benefits,
-          package_exclusions: exclusions
+          benefits,
+          exclusions
         };
       }));
-      
+
       return pricingWithRelations;
     } catch (error) {
       console.error('Error fetching package pricing:', error);
-      throw error;
+      // Provide more details about the error
+      if (error instanceof Error) {
+        throw error;
+      } else {
+        throw new Error('Unknown error occurred while fetching package pricing');
+      }
     }
   }
 
@@ -82,48 +122,62 @@ export class PackagePricingService {
       if (!withRelations) {
         return data;
       }
-      
+
+      // Ambil relasi benefit dan exclusion
       const [benefits, exclusions] = await Promise.all([
-        data.benefit_id ? this.getBenefitById(data.benefit_id) : null,
-        data.exclusion_id ? this.getExclusionById(data.exclusion_id) : null
+        PackageBenefitService.getByPackagePricingId(id),
+        PackageExclusionService.getByPackagePricingId(id)
       ]);
-      
+
       return {
         ...data,
-        package_benefits: benefits,
-        package_exclusions: exclusions
+        benefits,
+        exclusions
       };
     } catch (error) {
-      console.error('Error fetching package pricing:', error);
+      console.error(`Error fetching package pricing with ID ${id}:`, error);
       throw error;
     }
   }
 
-  static async create(pricing: Omit<PackagePricing, 'id' | 'created_at' | 'updated_at'>): Promise<PackagePricing> {
+  static async create(
+    pricing: Omit<PackagePricing, 'id' | 'created_at' | 'updated_at'> & {
+      benefitIds?: number[];
+      exclusionIds?: number[];
+    }
+  ): Promise<PackagePricing> {
     try {
-      if (!pricing.price || pricing.price <= 0) {
-        throw new Error('Price must be greater than 0');
-      }
+      // Pisahkan benefitIds dan exclusionIds dari data pricing
+      const { benefitIds, exclusionIds, ...pricingData } = pricing;
 
-      if (pricing.benefit_id) {
-        await this.validateBenefitExists(pricing.benefit_id);
-      }
-      if (pricing.exclusion_id) {
-        await this.validateExclusionExists(pricing.exclusion_id);
-      }
+      // Tambahkan timestamp
+      const now = new Date().toISOString();
 
+      // Insert data pricing
       const { data, error } = await supabase
         .from(this.TABLE_NAME)
         .insert({
-          ...pricing,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          ...pricingData,
+          created_at: now,
+          updated_at: now
         })
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+
+      // Link ke benefits jika ada
+      if (benefitIds && benefitIds.length > 0) {
+        await PackageBenefitService.linkToPackagePricing(data.id, benefitIds);
+      }
+
+      // Link ke exclusions jika ada
+      if (exclusionIds && exclusionIds.length > 0) {
+        await PackageExclusionService.linkToPackagePricing(data.id, exclusionIds);
+      }
+
+      // Ambil data lengkap dengan relasi
+      return this.getById(data.id, true) as Promise<PackagePricing>;
     } catch (error) {
       console.error('Error creating package pricing:', error);
       throw error;
@@ -132,24 +186,20 @@ export class PackagePricingService {
 
   static async update(
     id: number,
-    pricing: Partial<PackagePricing>
+    pricing: Partial<PackagePricing> & {
+      benefitIds?: number[];
+      exclusionIds?: number[];
+    }
   ): Promise<PackagePricing> {
     try {
-      if (pricing.price !== undefined && pricing.price <= 0) {
-        throw new Error('Price must be greater than 0');
-      }
+      // Pisahkan benefitIds dan exclusionIds dari data pricing
+      const { benefitIds, exclusionIds, ...pricingData } = pricing;
 
-      if (pricing.benefit_id) {
-        await this.validateBenefitExists(pricing.benefit_id);
-      }
-      if (pricing.exclusion_id) {
-        await this.validateExclusionExists(pricing.exclusion_id);
-      }
-
+      // Update data pricing
       const { data, error } = await supabase
         .from(this.TABLE_NAME)
         .update({
-          ...pricing,
+          ...pricingData,
           updated_at: new Date().toISOString()
         })
         .eq('id', id)
@@ -157,15 +207,43 @@ export class PackagePricingService {
         .single();
 
       if (error) throw error;
-      return data;
+
+      // Update links ke benefits jika ada
+      if (benefitIds !== undefined) {
+        await PackageBenefitService.linkToPackagePricing(id, benefitIds);
+      }
+
+      // Update links ke exclusions jika ada
+      if (exclusionIds !== undefined) {
+        await PackageExclusionService.linkToPackagePricing(id, exclusionIds);
+      }
+
+      // Ambil data lengkap dengan relasi
+      return this.getById(id, true) as Promise<PackagePricing>;
     } catch (error) {
-      console.error('Error updating package pricing:', error);
+      console.error(`Error updating package pricing with ID ${id}:`, error);
       throw error;
     }
   }
 
   static async delete(id: number): Promise<void> {
     try {
+      // Hapus dulu relasi di junction table
+      const [deleteBenefitJunction, deleteExclusionJunction] = await Promise.all([
+        supabase
+          .from(this.BENEFIT_JUNCTION_TABLE)
+          .delete()
+          .eq('package_pricing_id', id),
+        supabase
+          .from(this.EXCLUSION_JUNCTION_TABLE)
+          .delete()
+          .eq('package_pricing_id', id)
+      ]);
+
+      if (deleteBenefitJunction.error) throw deleteBenefitJunction.error;
+      if (deleteExclusionJunction.error) throw deleteExclusionJunction.error;
+
+      // Hapus package pricing
       const { error } = await supabase
         .from(this.TABLE_NAME)
         .delete()
@@ -173,159 +251,69 @@ export class PackagePricingService {
 
       if (error) throw error;
     } catch (error) {
-      console.error('Error deleting package pricing:', error);
+      console.error(`Error deleting package pricing with ID ${id}:`, error);
       throw error;
     }
   }
 
   static async bulkCreate(
-    pricings: Omit<PackagePricing, 'id' | 'created_at' | 'updated_at'>[]
+    pricings: (Omit<PackagePricing, 'id' | 'created_at' | 'updated_at'> & {
+      benefitIds?: number[];
+      exclusionIds?: number[];
+    })[]
   ): Promise<PackagePricing[]> {
     try {
+      const results: PackagePricing[] = [];
+
+      // Buat satu per satu untuk menangani relasi dengan benar
       for (const pricing of pricings) {
-        if (!pricing.price || pricing.price <= 0) {
-          throw new Error('All prices must be greater than 0');
-        }
-        if (pricing.benefit_id) {
-          await this.validateBenefitExists(pricing.benefit_id);
-        }
-        if (pricing.exclusion_id) {
-          await this.validateExclusionExists(pricing.exclusion_id);
-        }
+        const result = await this.create(pricing);
+        results.push(result);
       }
 
-      const pricingsData = pricings.map(pricing => ({
-        ...pricing,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }));
-
-      const { data, error } = await supabase
-        .from(this.TABLE_NAME)
-        .insert(pricingsData)
-        .select();
-
-      if (error) throw error;
-      return data || [];
+      return results;
     } catch (error) {
       console.error('Error bulk creating package pricing:', error);
       throw error;
     }
   }
 
-  static async bulkUpdate(
-    updates: { id: number; data: Partial<PackagePricing> }[]
-  ): Promise<PackagePricing[]> {
-    try {
-      const updatePromises = updates.map(async ({ id, data }) => {
-        if (data.price !== undefined && data.price <= 0) {
-          throw new Error(`Price must be greater than 0 for id: ${id}`);
-        }
-
-        if (data.benefit_id) {
-          await this.validateBenefitExists(data.benefit_id);
-        }
-        if (data.exclusion_id) {
-          await this.validateExclusionExists(data.exclusion_id);
-        }
-
-        return this.update(id, data);
-      });
-
-      const results = await Promise.all(updatePromises);
-      return results;
-    } catch (error) {
-      console.error('Error bulk updating package pricing:', error);
-      throw error;
-    }
-  }
-
   static async bulkDelete(ids: number[]): Promise<void> {
     try {
-      const { error } = await supabase
-        .from(this.TABLE_NAME)
-        .delete()
-        .in('id', ids);
-
-      if (error) throw error;
+      // Hapus satu per satu untuk memastikan relasi terhapus dengan benar
+      for (const id of ids) {
+        await this.delete(id);
+      }
     } catch (error) {
       console.error('Error bulk deleting package pricing:', error);
       throw error;
     }
   }
 
-  private static async validateBenefitExists(benefitId: number): Promise<void> {
-    const { data } = await supabase
-      .from('package_benefits')
-      .select('id')
-      .eq('id', benefitId)
-      .single();
-
-    if (!data) {
-      throw new Error(`Benefit with id ${benefitId} does not exist`);
+  static formatPrice(price: Record<string, any>): string {
+    // Price sekarang selalu object JSONB
+    if (price && typeof price === 'object') {
+      return price.id || price.en || '-';
     }
+    
+    return '-';
   }
 
-  private static async validateExclusionExists(exclusionId: number): Promise<void> {
-    const { data } = await supabase
-      .from('package_exclusions')
-      .select('id')
-      .eq('id', exclusionId)
-      .single();
+  static formatDuration(duration: Record<string, any>): string {
+    // Asumsi: format duration dalam bentuk { value: number, unit: string }
+    if (!duration || typeof duration !== 'object') return '-';
 
-    if (!data) {
-      throw new Error(`Exclusion with id ${exclusionId} does not exist`);
+    const value = duration.value;
+    const unit = duration.unit;
+    
+    if (unit === 'year' || unit === 'tahun') {
+      return `${value} ${value === 1 ? 'tahun' : 'tahun'}`;
+    } else if (unit === 'month' || unit === 'bulan') {
+      return `${value} ${value === 1 ? 'bulan' : 'bulan'}`;
+    } else if (unit === 'day' || unit === 'hari') {
+      return `${value} ${value === 1 ? 'hari' : 'hari'}`;
     }
-  }
-
-  static formatPrice(price: number): string {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR'
-    }).format(price);
-  }
-
-  static formatDuration(months: number): string {
-    if (months >= 12 && months % 12 === 0) {
-      const years = months / 12;
-      return `${years} ${years === 1 ? 'year' : 'years'}`;
-    }
-    return `${months} ${months === 1 ? 'month' : 'months'}`;
-  }
-
-  private static async getBenefits(id: number) {
-    const { data } = await supabase
-      .from('package_benefits')
-      .select('id,title,slug')
-      .eq('id', id)
-      .single();
-    return data;
-  }
-
-  private static async getExclusions(id: number) {
-    const { data } = await supabase
-      .from('package_exclusions')
-      .select('id,title,slug')
-      .eq('id', id)
-      .single();
-    return data;
-  }
-
-  private static async getBenefitById(id: number) {
-    const { data } = await supabase
-      .from('package_benefits')
-      .select('id,title,slug')
-      .eq('id', id)
-      .single();
-    return data;
-  }
-
-  private static async getExclusionById(id: number) {
-    const { data } = await supabase
-      .from('package_exclusions')
-      .select('id,title,slug')
-      .eq('id', id)
-      .single();
-    return data;
+    
+    return `${value} ${unit}`;
   }
 }

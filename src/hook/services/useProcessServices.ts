@@ -31,7 +31,6 @@ interface UseServiceProcessResult {
   // Fungsi khusus dan utility
   getActivityIds: (processId: number) => Promise<number[]>;
   getIconUrl: (path: string) => string;
-  formatDuration: (months: number) => string;
 }
 
 export function useServiceProcess(): UseServiceProcessResult {
@@ -203,11 +202,6 @@ export function useServiceProcess(): UseServiceProcessResult {
     return ServiceProcessService.getIconUrl(path);
   }, []);
 
-  // Utility function untuk memformat durasi
-  const formatDuration = useCallback((months: number) => {
-    return ServiceProcessService.formatDuration(months);
-  }, []);
-
   // Lakukan fetch processes pada saat komponen dipasang
   useEffect(() => {
     fetchProcesses();
@@ -225,7 +219,6 @@ export function useServiceProcess(): UseServiceProcessResult {
     deleteProcess,
     reorderProcesses,
     getActivityIds,
-    getIconUrl,
-    formatDuration
+    getIconUrl
   };
 }

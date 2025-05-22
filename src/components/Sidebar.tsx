@@ -30,7 +30,8 @@ import {
   Phone,
   Shield,
   User,
-  Layers
+  Layers,
+  CheckSquare
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -89,6 +90,19 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
             { title: "Tech Stack Skills", href: "/tech-stack-skill" },
             { title: "Tech Stack", href: "/tech-stack" },
             { title: "Featured Services", href: "/featured-services" },
+            { title: "FAQ", href: "/faq" },
+            { title: "Testimonial Category", href: "/testimonial-category" },
+            { title: "Testimonial", href: "/testimonial" },
+          ]
+        },
+        {
+          title: "Package Pricing",
+          icon: <Package className="w-4 h-4" />,
+          href: "/package-pricing",
+          submenu: [
+            { title: "Package Pricing", href: "/package-pricing" },
+            { title: "Package Benefit", href: "/package-benefit" },
+            { title: "Package Exclusion", href: "/package-exclusion" },
           ]
         },
         { 
@@ -162,6 +176,11 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           icon: <Phone className="w-4 h-4" />, 
           href: "/contact" 
         },
+        {
+          title: "Promise", 
+          icon: <CheckSquare className="w-4 h-4" />, 
+          href: "/promise-item",
+        }
       ]
     },
     {
