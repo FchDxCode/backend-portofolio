@@ -92,6 +92,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
             { title: "Featured Services", href: "/featured-services" },
             { title: "FAQ", href: "/faq" },
             { title: "Testimonial Category", href: "/testimonial-category" },
+            { title: "Testimonial", href: "/testimonial" },
           ]
         },
         {
