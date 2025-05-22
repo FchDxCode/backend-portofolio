@@ -2,146 +2,203 @@ import { useState, useEffect, useCallback } from 'react';
 import { PackagePricing } from '@/src/models/ServiceModels';
 import { PackagePricingService } from '@/src/services/services/PackagePricingServices';
 
-interface PricingFilters {
-  search?: string;
-  benefitId?: number;
-  exclusionId?: number;
-  sort?: 'price' | 'work_duration' | 'created_at';
-  order?: 'asc' | 'desc';
+interface UsePackagePricingOptions {
   withRelations?: boolean;
+  defaultSort?: 'price' | 'created_at';
+  defaultOrder?: 'asc' | 'desc';
 }
 
-export const usePackagePricing = (initialFilters?: PricingFilters) => {
-  const [pricing, setPricing] = useState<PackagePricing[]>([]);
-  const [loading, setLoading] = useState(true);
+export function usePackagePricing(options?: UsePackagePricingOptions) {
+  const [packages, setPackages] = useState<PackagePricing[]>([]);
+  const [currentPackage, setCurrentPackage] = useState<PackagePricing | null>(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const [filters, setFilters] = useState<PricingFilters>(initialFilters || {});
 
-  const fetchPricing = useCallback(async () => {
+  // Ambil semua package pricing
+  const fetchPackages = useCallback(async (params?: {
+    search?: string;
+    benefitId?: number;
+    exclusionId?: number;
+    sort?: 'price' | 'created_at';
+    order?: 'asc' | 'desc';
+    withRelations?: boolean;
+  }) => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      const data = await PackagePricingService.getAll(filters);
-      setPricing(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
-    } finally {
-      setLoading(false);
-    }
-  }, [filters]);
-
-  const createPricing = async (
-    pricing: Omit<PackagePricing, 'id' | 'created_at' | 'updated_at'>
-  ) => {
-    try {
-      setLoading(true);
-      const newPricing = await PackagePricingService.create(pricing);
-      setPricing(prev => [newPricing, ...prev]);
-      return newPricing;
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const updatePricing = async (
-    id: number,
-    pricing: Partial<PackagePricing>
-  ) => {
-    try {
-      setLoading(true);
-      const updatedPricing = await PackagePricingService.update(id, pricing);
-      setPricing(prev => prev.map(p => p.id === id ? updatedPricing : p));
-      return updatedPricing;
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const deletePricing = async (id: number) => {
-    try {
-      setLoading(true);
-      await PackagePricingService.delete(id);
-      setPricing(prev => prev.filter(p => p.id !== id));
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const bulkCreatePricing = async (
-    pricingsData: Omit<PackagePricing, 'id' | 'created_at' | 'updated_at'>[]
-  ) => {
-    try {
-      setLoading(true);
-      const newPricings = await PackagePricingService.bulkCreate(pricingsData);
-      setPricing(prev => [...newPricings, ...prev]);
-      return newPricings;
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const bulkUpdatePricing = async (
-    updates: { id: number; data: Partial<PackagePricing> }[]
-  ) => {
-    try {
-      setLoading(true);
-      const updatedPricings = await PackagePricingService.bulkUpdate(updates);
-      setPricing(prev => {
-        const updated = new Map(updatedPricings.map(p => [p.id, p]));
-        return prev.map(p => updated.get(p.id) || p);
+      const withRelations = params?.withRelations ?? options?.withRelations ?? false;
+      const data = await PackagePricingService.getAll({
+        ...params,
+        sort: params?.sort || options?.defaultSort || 'created_at',
+        order: params?.order || options?.defaultOrder || 'desc',
+        withRelations
       });
-      return updatedPricings;
+      setPackages(data);
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
-      throw err;
+      console.error('Error fetching package pricing:', err);
+      setError(err instanceof Error ? err : new Error('Gagal mengambil data paket harga'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [options?.withRelations, options?.defaultSort, options?.defaultOrder]);
 
-  const bulkDeletePricing = async (ids: number[]) => {
+  // Ambil detail package pricing
+  const fetchPackageById = useCallback(async (id: number, withRelations = true) => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      await PackagePricingService.bulkDelete(ids);
-      setPricing(prev => prev.filter(p => !ids.includes(p.id)));
+      const data = await PackagePricingService.getById(id, withRelations);
+      setCurrentPackage(data);
+      return data;
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
+      console.error(`Error fetching package pricing ${id}:`, err);
+      setError(err instanceof Error ? err : new Error('Gagal mengambil detail paket harga'));
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Buat package pricing baru
+  const createPackage = useCallback(async (
+    pricing: Omit<PackagePricing, 'id' | 'created_at' | 'updated_at'> & {
+      benefitIds?: number[];
+      exclusionIds?: number[];
+    }
+  ) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const newPackage = await PackagePricingService.create(pricing);
+      setPackages(prev => [...prev, newPackage]);
+      return newPackage;
+    } catch (err) {
+      console.error('Error creating package pricing:', err);
+      setError(err instanceof Error ? err : new Error('Gagal membuat paket harga baru'));
       throw err;
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
+  // Update package pricing
+  const updatePackage = useCallback(async (
+    id: number,
+    pricing: Partial<PackagePricing> & {
+      benefitIds?: number[];
+      exclusionIds?: number[];
+    }
+  ) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const updatedPackage = await PackagePricingService.update(id, pricing);
+      setPackages(prev => prev.map(p => p.id === id ? updatedPackage : p));
+      if (currentPackage?.id === id) {
+        setCurrentPackage(updatedPackage);
+      }
+      return updatedPackage;
+    } catch (err) {
+      console.error(`Error updating package pricing ${id}:`, err);
+      setError(err instanceof Error ? err : new Error('Gagal mengupdate paket harga'));
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPackage]);
+
+  // Hapus package pricing
+  const deletePackage = useCallback(async (id: number) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await PackagePricingService.delete(id);
+      setPackages(prev => prev.filter(p => p.id !== id));
+      if (currentPackage?.id === id) {
+        setCurrentPackage(null);
+      }
+    } catch (err) {
+      console.error(`Error deleting package pricing ${id}:`, err);
+      setError(err instanceof Error ? err : new Error('Gagal menghapus paket harga'));
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPackage]);
+
+  // Bulk create packages
+  const bulkCreatePackages = useCallback(async (
+    pricings: (Omit<PackagePricing, 'id' | 'created_at' | 'updated_at'> & {
+      benefitIds?: number[];
+      exclusionIds?: number[];
+    })[]
+  ) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const newPackages = await PackagePricingService.bulkCreate(pricings);
+      setPackages(prev => [...prev, ...newPackages]);
+      return newPackages;
+    } catch (err) {
+      console.error('Error bulk creating package pricing:', err);
+      setError(err instanceof Error ? err : new Error('Gagal membuat paket harga secara massal'));
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Bulk delete packages
+  const bulkDeletePackages = useCallback(async (ids: number[]) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await PackagePricingService.bulkDelete(ids);
+      setPackages(prev => prev.filter(p => !ids.includes(p.id)));
+      if (currentPackage && ids.includes(currentPackage.id)) {
+        setCurrentPackage(null);
+      }
+    } catch (err) {
+      console.error('Error bulk deleting package pricing:', err);
+      setError(err instanceof Error ? err : new Error('Gagal menghapus paket harga secara massal'));
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPackage]);
+
+  // Format harga
+  const formatPrice = useCallback((price: number) => {
+    return PackagePricingService.formatPrice(price);
+  }, []);
+
+  // Format durasi
+  const formatDuration = useCallback((duration: Record<string, any>) => {
+    return PackagePricingService.formatDuration(duration);
+  }, []);
+
+  // Load data saat komponen di-mount
   useEffect(() => {
-    fetchPricing();
-  }, [fetchPricing]);
+    fetchPackages({
+      withRelations: options?.withRelations,
+      sort: options?.defaultSort,
+      order: options?.defaultOrder
+    });
+  }, [fetchPackages, options?.withRelations, options?.defaultSort, options?.defaultOrder]);
 
   return {
-    pricing,
+    packages,
+    currentPackage,
     loading,
     error,
-    filters,
-    setFilters,
-    createPricing,
-    updatePricing,
-    deletePricing,
-    bulkCreatePricing,
-    bulkUpdatePricing,
-    bulkDeletePricing,
-    refreshPricing: fetchPricing,
-    formatPrice: PackagePricingService.formatPrice,
-    formatDuration: PackagePricingService.formatDuration
+    fetchPackages,
+    fetchPackageById,
+    createPackage,
+    updatePackage,
+    deletePackage,
+    bulkCreatePackages,
+    bulkDeletePackages,
+    formatPrice,
+    formatDuration
   };
-};
+}

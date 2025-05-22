@@ -91,6 +91,16 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
             { title: "Featured Services", href: "/featured-services" },
           ]
         },
+        {
+          title: "Package Pricing",
+          icon: <Package className="w-4 h-4" />,
+          href: "/package-pricing",
+          submenu: [
+            { title: "Package Pricing", href: "/package-pricing" },
+            { title: "Package Benefit", href: "/package-benefit" },
+            { title: "Package Exclusion", href: "/package-exclusion" },
+          ]
+        },
         { 
           title: "Service Process", 
           icon: <Activity className="w-4 h-4" />, 
