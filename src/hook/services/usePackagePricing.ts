@@ -4,7 +4,7 @@ import { PackagePricingService } from '@/src/services/services/PackagePricingSer
 
 interface UsePackagePricingOptions {
   withRelations?: boolean;
-  defaultSort?: 'price' | 'created_at';
+  defaultSort?: 'created_at';
   defaultOrder?: 'asc' | 'desc';
 }
 
@@ -19,7 +19,7 @@ export function usePackagePricing(options?: UsePackagePricingOptions) {
     search?: string;
     benefitId?: number;
     exclusionId?: number;
-    sort?: 'price' | 'created_at';
+    sort?: 'created_at';
     order?: 'asc' | 'desc';
     withRelations?: boolean;
   }) => {
@@ -168,7 +168,7 @@ export function usePackagePricing(options?: UsePackagePricingOptions) {
   }, [currentPackage]);
 
   // Format harga
-  const formatPrice = useCallback((price: number) => {
+  const formatPrice = useCallback((price: Record<string, any>) => {
     return PackagePricingService.formatPrice(price);
   }, []);
 

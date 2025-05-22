@@ -131,7 +131,7 @@ export default function ServicesProcessNewPage() {
     label: activity.title?.id || activity.title?.en || `Activity ${activity.id}`
   }));
 
-  return (
+    return (
     <div className="space-y-6">
       <PageHeader
         title="Tambah Proses Layanan"

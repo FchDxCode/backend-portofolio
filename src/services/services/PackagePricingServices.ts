@@ -6,7 +6,7 @@ import { PackageExclusionService } from "@/src/services/services/PackageExclusio
 const supabase = createClient();
 
 export class PackagePricingService {
-  private static TABLE_NAME = 'package_pricing';
+  private static TABLE_NAME = 'package_pricings';
   private static BENEFIT_JUNCTION_TABLE = 'package_pricing_benefits';
   private static EXCLUSION_JUNCTION_TABLE = 'package_pricing_exclusions';
 
@@ -14,7 +14,7 @@ export class PackagePricingService {
     search?: string;
     benefitId?: number;
     exclusionId?: number;
-    sort?: 'price' | 'created_at';
+    sort?: 'created_at';
     order?: 'asc' | 'desc';
     withRelations?: boolean;
   }): Promise<PackagePricing[]> {
@@ -31,15 +31,17 @@ export class PackagePricingService {
         `);
       }
 
-      // Sorting
-      if (params?.sort) {
-        query = query.order(params.sort, { ascending: params?.order === 'asc' });
-      } else {
-        query = query.order('created_at', { ascending: false });
-      }
+      // Sorting - hanya created_at
+      const sortField = 'created_at';
+      const isAscending = params?.order === 'asc';
+      
+      query = query.order(sortField, { ascending: isAscending });
 
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase query error:', error);
+        throw error;
+      }
 
       let filteredData = data || [];
 
@@ -97,7 +99,12 @@ export class PackagePricingService {
       return pricingWithRelations;
     } catch (error) {
       console.error('Error fetching package pricing:', error);
-      throw error;
+      // Provide more details about the error
+      if (error instanceof Error) {
+        throw error;
+      } else {
+        throw new Error('Unknown error occurred while fetching package pricing');
+      }
     }
   }
 
@@ -140,11 +147,6 @@ export class PackagePricingService {
     }
   ): Promise<PackagePricing> {
     try {
-      // Validasi harga
-      if (!pricing.price || pricing.price <= 0) {
-        throw new Error('Harga harus lebih besar dari 0');
-      }
-
       // Pisahkan benefitIds dan exclusionIds dari data pricing
       const { benefitIds, exclusionIds, ...pricingData } = pricing;
 
@@ -190,11 +192,6 @@ export class PackagePricingService {
     }
   ): Promise<PackagePricing> {
     try {
-      // Validasi harga jika ada
-      if (pricing.price !== undefined && pricing.price <= 0) {
-        throw new Error('Harga harus lebih besar dari 0');
-      }
-
       // Pisahkan benefitIds dan exclusionIds dari data pricing
       const { benefitIds, exclusionIds, ...pricingData } = pricing;
 
@@ -293,13 +290,13 @@ export class PackagePricingService {
     }
   }
 
-  static formatPrice(price: number): string {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(price);
+  static formatPrice(price: Record<string, any>): string {
+    // Price sekarang selalu object JSONB
+    if (price && typeof price === 'object') {
+      return price.id || price.en || '-';
+    }
+    
+    return '-';
   }
 
   static formatDuration(duration: Record<string, any>): string {

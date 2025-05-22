@@ -110,9 +110,12 @@ export interface Brand {
     title?: Record<string, any>;
     description?: Record<string, any>;
     work_duration?: Record<string, any>;
-    price: number;
+    price: Record<string, any>;
     created_at?: string;
     updated_at?: string;
+
+    benefits?: PackageBenefit[];
+    exclusions?: PackageExclusion[];
   }
 
   export interface PackagePricingBenefit {
