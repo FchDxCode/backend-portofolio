@@ -113,6 +113,16 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           icon: <Package className="w-4 h-4" />, 
           href: "/featured-services"
         },
+        {
+          title: "Process Activity Services",
+          icon: <Package className="w-4 h-4" />, 
+          href: "/process-activity-services"
+        },
+        {
+          title: "Service Process",
+          icon: <Package className="w-4 h-4" />, 
+          href: "/service-process"
+        },
         { 
           title: "Certificate", 
           icon: <Package className="w-4 h-4" />, 
