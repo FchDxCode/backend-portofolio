@@ -1,5 +1,3 @@
-'use server';
-
 import { createClient } from '@/src/utils/supabase/client';
 import { ServiceProcess } from '@/src/models/ServiceModels';
 import { saveFile, deleteFile } from '@/src/utils/server/FileStorage';  

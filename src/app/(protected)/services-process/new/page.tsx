@@ -1,132 +1,146 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { PageHeader } from '@/src/components/multipage/PageHeader';
-import { Button } from '@/src/components/multipage/Button';
-import { FormSection } from '@/src/components/multipage/FormSection';
-import { DetailView } from '@/src/components/multipage/DetailView';
-import { InputMultipage } from '@/src/components/multipage/InputMultipage';
-import { DropdownMultipage } from '@/src/components/multipage/DropdownMultipage';
-import { ImageUpload } from '@/src/components/multipage/ImageUpload';
-import { useServiceProcess } from '@/src/hook/services/useProcessServices';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { PageHeader } from "@/src/components/multipage/PageHeader";
+import { Button } from "@/src/components/multipage/Button";
+import { FormSection } from "@/src/components/multipage/FormSection";
+import { DetailView } from "@/src/components/multipage/DetailView";
+import { InputMultipage } from "@/src/components/multipage/InputMultipage";
+import { DropdownMultipage } from "@/src/components/multipage/DropdownMultipage";
+import { ImageUpload } from "@/src/components/multipage/ImageUpload";
+import { RadioButtonMultipage } from "@/src/components/multipage/RadioButtonMultipage";
+import { useServiceProcess } from "@/src/hook/services/useProcessServices";
+import { useProcessActivity } from "@/src/hook/services/useProcessActivity";
 
 type FormData = {
   title: { id: string; en: string };
   description: { id: string; en: string };
-  work_duration?: number;
-  icon?: string;
+  work_duration: number;
   is_active: boolean;
+  icon: string;
   activityIds: number[];
 };
 
-export default function ProcessNewPage() {
-  const router = useRouter();
-  const { createProcess, activities, fetchActivities } = useServiceProcess();
+// Define a type for fields that have language support
+type MultilingualFields = 'title' | 'description';
 
-  const [activeTab, setActiveTab] = useState<'id' | 'en'>('id');
+export default function ServicesProcessNewPage() {
+  const router = useRouter();
+  const { createProcess } = useServiceProcess();
+  const { activities } = useProcessActivity();
+  
+  // Language tab state
+  const [activeTab, setActiveTab] = useState<"id" | "en">("id");
+  
+  // Form state
   const [formData, setFormData] = useState<FormData>({
-    title: { id: '', en: '' },
-    description: { id: '', en: '' },
-    work_duration: undefined,
+    title: { id: "", en: "" },
+    description: { id: "", en: "" },
+    work_duration: 1,
     is_active: true,
-    activityIds: []
+    icon: "",
+    activityIds: [],
   });
+  
+  // Image state
   const [iconFile, setIconFile] = useState<File | null>(null);
-  const [iconType, setIconType] = useState<'file' | 'class'>('file');
-  const [iconClass, setIconClass] = useState('');
+  
+  // UI state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // INPUT HANDLER
-  const handleInputChange = (
-    field: keyof FormData,
-    value: any,
-    lang?: 'id' | 'en'
-  ) => {
+  // Handle input change
+  const handleInputChange = (field: keyof FormData, value: any, lang?: "id" | "en") => {
     if (lang) {
-      setFormData((prev) => {
-        const currentField = prev[field] as Record<string, string>;
-        
-        return {
+      // Check if the field is a multilingual field
+      if (['title', 'description'].includes(field)) {
+        setFormData(prev => ({
           ...prev,
           [field]: {
-            ...currentField,
-            [lang]: value,
-          },
-        };
-      });
+            ...prev[field as MultilingualFields],
+            [lang]: value
+          }
+        }));
+      }
     } else {
-      setFormData((prev) => ({
+      setFormData(prev => ({
         ...prev,
-        [field]: value,
+        [field]: value
       }));
     }
   };
 
-  // VALIDASI
-  const validateForm = () => {
-    setError(null);
+  // Handle activities selection
+  const handleActivitiesChange = (value: string | number | (string | number)[]) => {
+    // If it's already an array, use it, otherwise create a new array with the single value
+    const values = Array.isArray(value) ? value : [value];
+    
+    // Convert all values to numbers
+    const numericValues = values.map(val => 
+      typeof val === 'string' ? parseInt(val, 10) : val
+    );
+    
+    setFormData(prev => ({
+      ...prev,
+      activityIds: numericValues as number[]
+    }));
+  };
 
-    if (!formData.title.id && !formData.title.en) {
-      setError('Judul proses harus diisi (ID atau EN)');
+  // Validate form
+  const validateForm = () => {
+    // Reset error
+    setError(null);
+    
+    // Required fields validation
+    if (!formData.title.id) {
+      setError("Judul proses (Indonesia) wajib diisi");
       return false;
     }
+    
     return true;
   };
 
-  // SUBMIT
+  // Form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!validateForm()) return;
-
+    
+    if (!validateForm()) {
+      return;
+    }
+    
     try {
       setIsSubmitting(true);
       
-      const processData = {
-        ...formData,
-        icon: iconType === 'class' ? iconClass : undefined,
-      };
+      // Create process
+      await createProcess(formData, iconFile || undefined);
       
-      await createProcess(
-        processData,
-        iconType === 'file' ? iconFile || undefined : undefined
-      );
-      
-      router.push('/processes');
+      // Redirect to process list
+      router.push("/services-process");
     } catch (err) {
       console.error('Error creating process:', err);
-      
-      let errorMessage = 'Terjadi kesalahan saat menyimpan data';
-      if (err instanceof Error) {
-        errorMessage = err.message;
-      } else if (typeof err === 'object' && err !== null) {
-        errorMessage = JSON.stringify(err);
-      }
-      
-      setError(errorMessage);
+      setError(err instanceof Error ? err.message : "Terjadi kesalahan saat menyimpan proses");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // OPTIONS
-  const activityOptions = activities.map((activity) => ({
-    label: activity.title?.id || activity.title?.en || `Activity ${activity.id}`,
+  // Activity options for dropdown
+  const activityOptions = activities.map(activity => ({
     value: activity.id,
+    label: activity.title?.id || activity.title?.en || `Activity ${activity.id}`
   }));
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Tambah Proses Layanan"
-        backUrl="/processes"
+        backUrl="/services-process"
         actions={
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => router.push('/processes')}
+            <Button 
+              variant="outline" 
+              onClick={() => router.push("/services-process")}
             >
               Batal
             </Button>
@@ -156,22 +170,22 @@ export default function ProcessNewPage() {
               <div className="flex border-b border-gray-200">
                 <button
                   type="button"
-                  onClick={() => setActiveTab('id')}
+                  onClick={() => setActiveTab("id")}
                   className={`py-2 px-4 ${
-                    activeTab === 'id'
-                      ? 'border-b-2 border-primary font-medium'
-                      : 'text-muted-foreground'
+                    activeTab === "id"
+                      ? "border-b-2 border-primary font-medium"
+                      : "text-muted-foreground"
                   }`}
                 >
                   Bahasa Indonesia
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveTab('en')}
+                  onClick={() => setActiveTab("en")}
                   className={`py-2 px-4 ${
-                    activeTab === 'en'
-                      ? 'border-b-2 border-primary font-medium'
-                      : 'text-muted-foreground'
+                    activeTab === "en"
+                      ? "border-b-2 border-primary font-medium"
+                      : "text-muted-foreground"
                   }`}
                 >
                   English
@@ -183,158 +197,101 @@ export default function ProcessNewPage() {
                 <div className="space-y-4">
                   {/* Process Title */}
                   <div className="space-y-2">
-                    <InputMultipage
+                    <InputMultipage 
                       value={formData.title[activeTab]}
-                      onChange={(e) =>
-                        handleInputChange('title', e.target.value, activeTab)
-                      }
-                      label={`Judul Proses ${
-                        activeTab === 'id' ? '(Indonesia)' : '(English)'
-                      }`}
+                      onChange={(e) => handleInputChange("title", e.target.value, activeTab)}
+                      label={`Judul Proses ${activeTab === "id" ? "(Indonesia)" : "(English)"}`}
                       language={activeTab}
-                      required={activeTab === 'id'}
-                      placeholder={`Masukkan judul proses ${
-                        activeTab === 'id'
-                          ? 'dalam Bahasa Indonesia'
-                          : 'in English'
-                      }`}
+                      required={activeTab === "id"}
+                      placeholder={`Masukkan judul proses ${activeTab === "id" ? "dalam Bahasa Indonesia" : "in English"}`}
                     />
                   </div>
+                </div>
+              </FormSection>
 
-                  {/* Process Description */}
-                  <div className="space-y-2">
-                    <InputMultipage
-                      value={formData.description[activeTab]}
-                      onChange={(e) =>
-                        handleInputChange(
-                          'description',
-                          e.target.value,
-                          activeTab
-                        )
-                      }
-                      label={`Deskripsi Proses ${
-                        activeTab === 'id' ? '(Indonesia)' : '(English)'
-                      }`}
-                      language={activeTab}
-                      multiline
-                      rows={5}
-                      placeholder={`Masukkan deskripsi proses ${
-                        activeTab === 'id'
-                          ? 'dalam Bahasa Indonesia'
-                          : 'in English'
-                      }`}
-                    />
-                  </div>
+              {/* Process Description */}
+              <FormSection title="Deskripsi">
+                <div className="space-y-2">
+                  <InputMultipage 
+                    value={formData.description[activeTab]}
+                    onChange={(e) => handleInputChange("description", e.target.value, activeTab)}
+                    label={`Deskripsi ${activeTab === "id" ? "(Indonesia)" : "(English)"}`}
+                    language={activeTab}
+                    multiline={true}
+                    rows={5}
+                    placeholder={`Masukkan deskripsi proses ${activeTab === "id" ? "dalam Bahasa Indonesia" : "in English"}`}
+                  />
+                </div>
+              </FormSection>
+
+              {/* Related Activities */}
+              <FormSection title="Aktivitas Terkait">
+                <div className="space-y-2">
+                  <DropdownMultipage
+                    label="Aktivitas Terkait"
+                    value={formData.activityIds}
+                    onChange={handleActivitiesChange}
+                    options={activityOptions}
+                    placeholder="Pilih aktivitas terkait"
+                    isMultiple={true}
+                    
+                  />
                 </div>
               </FormSection>
             </div>
 
             {/* Sidebar - 1/3 width */}
             <div className="space-y-6">
-              <FormSection title="Pengaturan Proses">
-                <div className="space-y-4">
-                  {/* Work Duration */}
-                  <div className="space-y-2">
-                    <InputMultipage
-                      value={formData.work_duration?.toString() || ''}
-                      onChange={(e) =>
-                        handleInputChange(
-                          'work_duration',
-                          e.target.value ? parseInt(e.target.value) : undefined
-                        )
-                      }
-                      label="Durasi Pengerjaan (bulan)"
-                      type="number"
-                      min={1}
-                      placeholder="Masukkan durasi pengerjaan dalam bulan"
-                    />
-                  </div>
-
-                  {/* Active Status */}
-                  <div className="space-y-2">
-                    <DropdownMultipage
-                      label="Status"
-                      options={[
-                        { label: 'Aktif', value: true },
-                        { label: 'Tidak Aktif', value: false }
-                      ]}
-                      value={formData.is_active ? 'Aktif' : 'Tidak Aktif'}
-                      onChange={(value) =>
-                        handleInputChange('is_active', value)
-                      }
-                      placeholder="Pilih status"
-                    />
-                  </div>
-
-                  {/* Activities Selection - Multiple */}
-                  <div className="space-y-2">
-                    <DropdownMultipage
-                      label="Aktivitas Terkait"
-                      options={activityOptions}
-                      value={formData.activityIds}
-                      onChange={(value) =>
-                        handleInputChange('activityIds', value)
-                      }
-                      placeholder="Pilih aktivitas terkait"
-                      isMultiple={true}
-                    />
-                  </div>
+              {/* Process Icon */}
+              <FormSection title="Ikon Proses">
+                <ImageUpload
+                  onChange={setIconFile}
+                  value={iconFile}
+                  maxSize={5}
+                  aspectRatio="square"
+                  label="Unggah Ikon"
+                  description="Format: JPG, PNG, SVG. Maks 5MB."
+                />
+                <div className="mt-4">
+                  <InputMultipage
+                    label="Kelas Ikon (Opsional)"
+                    placeholder="Contoh: fa fa-home, bi bi-house, material-icons home"
+                    value={iconFile ? "" : formData.icon}
+                    onChange={(e) => handleInputChange("icon", e.target.value)}
+                    
+                    helperText="Masukkan kelas ikon dari Font Awesome, Bootstrap Icons, atau Material Icons"
+                  />
                 </div>
               </FormSection>
 
-              <FormSection title="Icon Proses">
+              {/* Process Settings */}
+              <FormSection title="Pengaturan Proses">
                 <div className="space-y-4">
-                  <div className="flex items-center space-x-4">
-                    <button
-                      type="button"
-                      onClick={() => setIconType('file')}
-                      className={`px-3 py-1.5 text-sm rounded-md ${
-                        iconType === 'file'
-                          ? 'bg-primary text-white'
-                          : 'bg-gray-100 text-gray-700'
-                      }`}
-                    >
-                      Upload File
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIconType('class')}
-                      className={`px-3 py-1.5 text-sm rounded-md ${
-                        iconType === 'class'
-                          ? 'bg-primary text-white'
-                          : 'bg-gray-100 text-gray-700'
-                      }`}
-                    >
-                      Class Icon
-                    </button>
+                  {/* Duration */}
+                  <div className="space-y-2">
+                    <InputMultipage
+                      value={formData.work_duration.toString()}
+                      onChange={(e) => handleInputChange("work_duration", Number(e.target.value) || 1)}
+                      label="Durasi Pengerjaan (bulan)"
+                      type="number"
+                      min={1}
+                      placeholder="Masukkan durasi dalam bulan"
+                      helperText="Lama waktu pengerjaan dalam bulan"
+                    />
                   </div>
-
-                  {iconType === 'file' ? (
-                    <>
-                      <ImageUpload
-                        onChange={setIconFile}
-                        label="Unggah Icon Proses"
-                        value={iconFile}
-                        maxSize={5 * 1024 * 1024}
-                        accept="image/*"
-                      />
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Format: JPG, PNG, SVG. Ukuran maksimal: 5MB.
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <InputMultipage
-                        label="Class Icon"
-                        value={iconClass}
-                        onChange={(e) => setIconClass(e.target.value)}
-                        placeholder="Contoh: fa fa-code, bi bi-app, material-icons-work"
-                      />
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Gunakan class icon dari Font Awesome, Bootstrap Icons, atau Material Icons.
-                      </p>
-                    </>
-                  )}
+                  
+                  {/* Status */}
+                  <div className="space-y-2">
+                    <RadioButtonMultipage
+                      label="Status"
+                      options={[
+                        { label: "Aktif", value: "true" },
+                        { label: "Nonaktif", value: "false" },
+                      ]}
+                      value={formData.is_active ? "true" : "false"}
+                      onChange={(value) => handleInputChange("is_active", value === "true")}
+                    />
+                  </div>
                 </div>
               </FormSection>
             </div>
