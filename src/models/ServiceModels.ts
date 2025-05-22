@@ -160,10 +160,10 @@ export interface Brand {
     id: number;
     profile?: string;
     name?: string;
-    job?: string;
-    star?: number;
-    project?: string;
-    industry?: string;
+    job?: Record<string, any>;
+    star?: number; // 1 - 5
+    project?: Record<string, any>;
+    industry?: Record<string, any>;
     year?: number;
     message?: Record<string, any>;
     testimonial_category_id?: number;

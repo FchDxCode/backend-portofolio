@@ -90,6 +90,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
             { title: "Tech Stack Skills", href: "/tech-stack-skill" },
             { title: "Tech Stack", href: "/tech-stack" },
             { title: "Featured Services", href: "/featured-services" },
+            { title: "FAQ", href: "/faq" },
           ]
         },
         {
