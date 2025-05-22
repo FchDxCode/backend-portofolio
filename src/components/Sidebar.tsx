@@ -89,13 +89,13 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           title: "Services", 
           icon: <ShoppingCart className="w-4 h-4" />, 
           href: "/brand", 
-          badge: "5", 
+          badge: "6", 
           badgeColor: "bg-emerald-500",
           submenu: [
             { title: "brand", href: "/brand" },
             { title: "service benefit", href: "/service-benefit" },
             { title: "tech stack skill", href: "/tech-stack-skill" },
-            { title: "tech stack", href: "/tech-stack" }
+            { title: "tech stack", href: "/tech-stack" },
           ]
         },
         { 
@@ -107,6 +107,11 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
             { title: "Category Article", href: "/category-article" },
             { title: "Tag Article", href: "/article-tag" }
           ]
+        },
+        {
+          title: "Featured Services",
+          icon: <Package className="w-4 h-4" />, 
+          href: "/featured-services"
         },
         { 
           title: "Certificate", 

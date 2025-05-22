@@ -1,82 +1,181 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FeaturedService } from '@/src/models/ServiceModels';
+import { FeaturedService, ServiceBenefit } from '@/src/models/ServiceModels';
 import { FeaturedServiceService } from '@/src/services/services/FeaturedServices';
 
-interface ServiceFilters {
-  benefitId?: number;
-  skillId?: number;
-  search?: string;
-  sort?: 'created_at';
-  order?: 'asc' | 'desc';
+// Interface untuk hasil hook
+interface UseFeaturedServiceResult {
+  services: FeaturedService[];
+  loading: boolean;
+  error: Error | null;
+  currentService: FeaturedService | null;
+  benefits: ServiceBenefit[];
+  
+  // Fungsi CRUD
+  fetchServices: (params?: any) => Promise<void>;
+  fetchServiceById: (id: number) => Promise<void>;
+  createService: (
+    service: Omit<FeaturedService, 'id' | 'created_at' | 'updated_at'> & {
+      benefitIds?: number[];
+      skillIds?: number[];
+    },
+    iconFile?: File
+  ) => Promise<FeaturedService>;
+  updateService: (
+    id: number,
+    service: Partial<FeaturedService> & {
+      benefitIds?: number[];
+      skillIds?: number[];
+    },
+    iconFile?: File
+  ) => Promise<FeaturedService>;
+  deleteService: (id: number) => Promise<void>;
+  
+  // Utility functions
+  getIconUrl: (path: string) => string;
 }
 
-export const useFeaturedServices = (initialFilters?: ServiceFilters) => {
+export function useFeaturedService(): UseFeaturedServiceResult {
+  // State untuk menyimpan data
   const [services, setServices] = useState<FeaturedService[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
-  const [filters, setFilters] = useState<ServiceFilters>(initialFilters || {});
+  const [currentService, setCurrentService] = useState<FeaturedService | null>(null);
+  const [benefits, setBenefits] = useState<ServiceBenefit[]>([]);
 
-  const fetchServices = useCallback(async () => {
+  // Fungsi untuk mengambil daftar layanan
+  const fetchServices = useCallback(async (params?: any) => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      const data = await FeaturedServiceService.getAll(filters);
+      const data = await FeaturedServiceService.getAll(params);
       setServices(data);
-      setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
+      console.error('Error fetching services:', err);
+      setError(err instanceof Error ? err : new Error('Failed to fetch services'));
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, []);
 
-  const createService = async (
-    service: Omit<FeaturedService, 'id' | 'created_at' | 'updated_at'>,
-    iconFile?: File
-  ) => {
+  // Fungsi untuk mengambil layanan berdasarkan ID
+  const fetchServiceById = useCallback(async (id: number) => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
+      const data = await FeaturedServiceService.getById(id);
+      setCurrentService(data);
+      
+      // Jika service memiliki benefits, simpan di state benefits
+      if (data?.benefits) {
+        setBenefits(data.benefits);
+      }
+    } catch (err) {
+      console.error(`Error fetching service with ID ${id}:`, err);
+      setError(err instanceof Error ? err : new Error(`Failed to fetch service with ID ${id}`));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Fungsi untuk membuat layanan baru
+  const createService = useCallback(async (
+    service: Omit<FeaturedService, 'id' | 'created_at' | 'updated_at'> & {
+      benefitIds?: number[];
+      skillIds?: number[];
+    },
+    iconFile?: File
+  ): Promise<FeaturedService> => {
+    setLoading(true);
+    setError(null);
+    try {
       const newService = await FeaturedServiceService.create(service, iconFile);
-      setServices(prev => [newService, ...prev]);
+      
+      // Update daftar layanan
+      setServices(prevServices => [...prevServices, newService]);
+      
+      // Set current service ke layanan baru
+      setCurrentService(newService);
+      
       return newService;
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
-      throw err;
+      console.error('Error creating service:', err);
+      const error = err instanceof Error ? err : new Error('Failed to create service');
+      setError(error);
+      throw error;
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const updateService = async (
+  // Fungsi untuk memperbarui layanan
+  const updateService = useCallback(async (
     id: number,
-    service: Partial<FeaturedService>,
-    newIconFile?: File
-  ) => {
+    service: Partial<FeaturedService> & {
+      benefitIds?: number[];
+      skillIds?: number[];
+    },
+    iconFile?: File
+  ): Promise<FeaturedService> => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      const updatedService = await FeaturedServiceService.update(id, service, newIconFile);
-      setServices(prev => prev.map(s => s.id === id ? updatedService : s));
+      const updatedService = await FeaturedServiceService.update(id, service, iconFile);
+      
+      // Update daftar layanan
+      setServices(prevServices =>
+        prevServices.map(s => s.id === id ? updatedService : s)
+      );
+      
+      // Update current service jika yang diupdate adalah current service
+      if (currentService?.id === id) {
+        setCurrentService(updatedService);
+        
+        // Update benefits jika service memiliki benefits
+        if (updatedService?.benefits) {
+          setBenefits(updatedService.benefits);
+        }
+      }
+      
       return updatedService;
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
-      throw err;
+      console.error(`Error updating service with ID ${id}:`, err);
+      const error = err instanceof Error ? err : new Error(`Failed to update service with ID ${id}`);
+      setError(error);
+      throw error;
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentService]);
 
-  const deleteService = async (id: number) => {
+  // Fungsi untuk menghapus layanan
+  const deleteService = useCallback(async (id: number): Promise<void> => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
       await FeaturedServiceService.delete(id);
-      setServices(prev => prev.filter(s => s.id !== id));
+      
+      // Hapus dari daftar layanan
+      setServices(prevServices => prevServices.filter(s => s.id !== id));
+      
+      // Reset current service jika yang dihapus adalah current service
+      if (currentService?.id === id) {
+        setCurrentService(null);
+        setBenefits([]);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
-      throw err;
+      console.error(`Error deleting service with ID ${id}:`, err);
+      setError(err instanceof Error ? err : new Error(`Failed to delete service with ID ${id}`));
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentService]);
 
+  // Utility function untuk mendapatkan URL icon
+  const getIconUrl = useCallback((path: string) => {
+    return FeaturedServiceService.getIconUrl(path);
+  }, []);
+
+  // Lakukan fetch services pada saat komponen dipasang
   useEffect(() => {
     fetchServices();
   }, [fetchServices]);
@@ -85,12 +184,13 @@ export const useFeaturedServices = (initialFilters?: ServiceFilters) => {
     services,
     loading,
     error,
-    filters,
-    setFilters,
+    currentService,
+    benefits,
+    fetchServices,
+    fetchServiceById,
     createService,
     updateService,
     deleteService,
-    refreshServices: fetchServices,
-    getIconUrl: FeaturedServiceService.getIconUrl
+    getIconUrl
   };
-};
+}
