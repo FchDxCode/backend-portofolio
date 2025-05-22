@@ -312,14 +312,6 @@ export class ServiceProcessService {
     return /^https?:\/\//i.test(path) ? path : path.startsWith('/') ? path : `/${path}`;
   }
 
-  static formatDuration(months: number) {
-    if (months >= 12 && months % 12 === 0) {
-      const years = months / 12;
-      return `${years} ${years === 1 ? 'tahun' : 'tahun'}`;
-    }
-    return `${months} ${months === 1 ? 'bulan' : 'bulan'}`;
-  }
-
   // Mendapatkan activity IDs dari service process
   static async getActivityIds(processId: number): Promise<number[]> {
     try {

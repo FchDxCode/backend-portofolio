@@ -17,14 +17,14 @@ import { ServiceProcess } from "@/src/models/ServiceModels";
 type FormData = {
   title: { id: string; en: string };
   description: { id: string; en: string };
-  work_duration: number;
+  work_duration: {id: string, en: string};
   is_active: boolean;
   icon: string;
   activityIds: number[];
 };
 
 // Define a type for fields that have language support
-type MultilingualFields = 'title' | 'description';
+type MultilingualFields = 'title' | 'description' | 'work_duration';
 
 export default function ServicesProcessEditPage() {
   const router = useRouter();
@@ -41,7 +41,7 @@ export default function ServicesProcessEditPage() {
   const [formData, setFormData] = useState<FormData>({
     title: { id: "", en: "" },
     description: { id: "", en: "" },
-    work_duration: 1,
+    work_duration: {id: "", en: ""},
     is_active: true,
     icon: "",
     activityIds: [],
@@ -82,7 +82,10 @@ export default function ServicesProcessEditPage() {
             id: process.description?.id || "",
             en: process.description?.en || ""
           },
-          work_duration: process.work_duration || 1,
+          work_duration: {
+            id: process.work_duration?.id || "",
+            en: process.work_duration?.en || ""
+          },
           is_active: process.is_active !== false, // Default to true if undefined
           icon: process.icon || "",
           activityIds: activityIds || []
@@ -107,7 +110,7 @@ export default function ServicesProcessEditPage() {
   const handleInputChange = (field: keyof FormData, value: any, lang?: "id" | "en") => {
     if (lang) {
       // Check if the field is a multilingual field
-      if (['title', 'description'].includes(field)) {
+      if (['title', 'description', 'work_duration'].includes(field)) {
         setFormData(prev => ({
           ...prev,
           [field]: {
@@ -192,8 +195,22 @@ export default function ServicesProcessEditPage() {
     try {
       setIsSubmitting(true);
       
+      // Create a copy of form data for submission with the correct type
+      const submitData: Partial<ServiceProcess> & { activityIds?: number[] } = {
+        title: formData.title,
+        description: formData.description,
+        work_duration: formData.work_duration,
+        is_active: formData.is_active,
+        activityIds: formData.activityIds
+      };
+      
+      // Only include icon if it's not a file path or we're uploading a new file
+      if (!(formData.icon && formData.icon.startsWith('/uploads/')) || iconFile) {
+        submitData.icon = formData.icon;
+      }
+      
       // Update process
-      await updateProcess(processId, formData, iconFile || undefined);
+      await updateProcess(processId, submitData, iconFile || undefined);
       
       // Redirect to process list
       router.push("/services-process");
@@ -344,7 +361,7 @@ export default function ServicesProcessEditPage() {
                   <InputMultipage
                     label="Kelas Ikon (Opsional)"
                     placeholder="Contoh: fa fa-home, bi bi-house, material-icons home"
-                    value={iconFile ? "" : formData.icon}
+                    value={iconFile ? "" : (formData.icon && formData.icon.startsWith('/uploads/') ? "" : formData.icon)}
                     onChange={(e) => handleIconClassChange(e.target.value)}
                     helperText="Masukkan kelas ikon dari Font Awesome, Bootstrap Icons, atau Material Icons"
                   />
@@ -357,13 +374,11 @@ export default function ServicesProcessEditPage() {
                   {/* Duration */}
                   <div className="space-y-2">
                     <InputMultipage
-                      value={formData.work_duration.toString()}
-                      onChange={(e) => handleInputChange("work_duration", Number(e.target.value) || 1)}
-                      label="Durasi Pengerjaan (bulan)"
-                      type="number"
-                      min={1}
-                      placeholder="Masukkan durasi dalam bulan"
-                      helperText="Lama waktu pengerjaan dalam bulan"
+                      value={formData.work_duration[activeTab]}
+                      onChange={(e) => handleInputChange("work_duration", e.target.value, activeTab)}
+                      label={`Durasi Pengerjaan ${activeTab === "id" ? "(Indonesia)" : "(English)"}`}
+                      language={activeTab}
+                      placeholder={`Masukkan durasi dalam bulan ${activeTab === "id" ? "dalam Bahasa Indonesia" : "in English"}`}
                     />
                   </div>
                   

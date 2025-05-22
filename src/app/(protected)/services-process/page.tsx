@@ -22,7 +22,6 @@ export default function ServicesProcessPage() {
     deleteProcess,
     reorderProcesses,
     getIconUrl,
-    formatDuration
   } = useServiceProcess();
 
   const { activities } = useProcessActivity();
@@ -127,8 +126,15 @@ export default function ServicesProcessPage() {
     },
     {
       header: "Durasi",
-      accessor: (process) => process.work_duration ? 
-        formatDuration(process.work_duration) : "-",
+      accessor: (process) => {
+        if (!process.work_duration) return "-";
+        
+        if (typeof process.work_duration === 'object') {
+          return process.work_duration.id || process.work_duration.en || "-";
+        }
+        
+        return process.work_duration;
+      },
     },
     {
       header: "Status",

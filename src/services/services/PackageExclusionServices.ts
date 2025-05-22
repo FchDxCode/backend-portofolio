@@ -17,7 +17,7 @@ export class PackageExclusionService {
         .select('*');
 
       if (params?.search) {
-        query = query.or(`title->en.ilike.%${params.search}%,title->id.ilike.%${params.search}%,slug.ilike.%${params.search}%`);
+        query = query.or(`title->en.ilike.%${params.search}%,title->id.ilike.%${params.search}%`);
       }
 
       if (params?.sort) {
@@ -57,7 +57,6 @@ export class PackageExclusionService {
     try {
       const exclusionData = {
         ...exclusion,
-        slug: exclusion.slug || this.generateSlug(exclusion.title?.en || '')
       };
 
       const { data, error } = await supabase
@@ -87,10 +86,6 @@ export class PackageExclusionService {
         ...exclusion,
         updated_at: new Date().toISOString()
       };
-
-      if (exclusion.title?.en && !exclusion.slug) {
-        updateData.slug = this.generateSlug(exclusion.title.en);
-      }
 
       const { data, error } = await supabase
         .from(this.TABLE_NAME)
@@ -136,7 +131,6 @@ export class PackageExclusionService {
     try {
       const exclusionsData = exclusions.map(exclusion => ({
         ...exclusion,
-        slug: exclusion.slug || this.generateSlug(exclusion.title?.en || ''),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }));
@@ -191,14 +185,5 @@ export class PackageExclusionService {
       console.error('Error bulk deleting package exclusions:', error);
       throw error;
     }
-  }
-
-  private static generateSlug(text: string): string {
-    return text
-      .toLowerCase()
-      .replace(/[^\w\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .trim();
   }
 }

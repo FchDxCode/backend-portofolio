@@ -53,7 +53,7 @@ export interface Brand {
     id: number;
     title?: Record<string, any>;
     description?: Record<string, any>;
-    work_duration?: number;
+    work_duration?: Record<string, any>;
     icon?: string;
     order_no?: number;
     is_active?: boolean;
@@ -90,36 +90,43 @@ export interface Brand {
     updated_at?: string;
   }
   
-// Package
+// Package Benefit
   export interface PackageBenefit {
     id: number;
     title?: Record<string, any>;
-    slug: string;
     created_at?: string;
     updated_at?: string;
   }
-  
+
   export interface PackageExclusion {
     id: number;
     title?: Record<string, any>;
-    slug: string;
     created_at?: string;
     updated_at?: string;
   }
-  
+
   export interface PackagePricing {
     id: number;
     title?: Record<string, any>;
     description?: Record<string, any>;
-    work_duration?: number;
+    work_duration?: Record<string, any>;
     price: number;
-    tag?: string;
-    benefit_id?: number;
-    exclusion_id?: number;
     created_at?: string;
     updated_at?: string;
   }
-  
+
+  export interface PackagePricingBenefit {
+    package_pricing_id: number;
+    package_benefit_id: number;
+  }
+
+  export interface PackagePricingExclusion {
+    package_pricing_id: number;
+    package_exclusion_id: number;
+  }
+
+// Promise
+
   export interface PromiseItem {
     id: number;
     icon?: string;
@@ -136,6 +143,8 @@ export interface Brand {
     created_at?: string;
     updated_at?: string;
   }
+
+// Testimonial
   
   export interface TestimonialCategory {
     id: number;
