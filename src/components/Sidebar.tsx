@@ -30,7 +30,8 @@ import {
   Phone,
   Shield,
   User,
-  Layers
+  Layers,
+  CheckSquare
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -172,6 +173,11 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           icon: <Phone className="w-4 h-4" />, 
           href: "/contact" 
         },
+        {
+          title: "Promise", 
+          icon: <CheckSquare className="w-4 h-4" />, 
+          href: "/promise-item",
+        }
       ]
     },
     {
