@@ -161,7 +161,7 @@ export interface Brand {
     profile?: string;
     name?: string;
     job?: Record<string, any>;
-    star?: number; // 1 - 5
+    star?: number; 
     project?: Record<string, any>;
     industry?: Record<string, any>;
     year?: number;
@@ -169,4 +169,6 @@ export interface Brand {
     testimonial_category_id?: number;
     created_at?: string;
     updated_at?: string;
+
+    testimonial_categories?: TestimonialCategory; 
   }

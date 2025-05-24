@@ -1,7 +1,6 @@
   export interface SkillCategory {
     id: number;
     title?: Record<string, any>;
-    slug: string;
     icon?: string;
     created_at?: string;
     updated_at?: string;
@@ -10,7 +9,6 @@
   export interface Skill {
     id: number;
     title?: Record<string, any>;
-    slug: string;
     icon?: string;
     percent_skills?: number;
     long_experience?: number;

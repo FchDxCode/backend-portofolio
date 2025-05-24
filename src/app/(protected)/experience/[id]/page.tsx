@@ -301,7 +301,7 @@ export default function ExperienceDetailPage() {
                 </DetailItem>
               </div>
               
-              <div>
+        <div>
                 <DetailItem label="Pencapaian Utama (English)">
                   <div className="prose prose-sm max-w-none">
                     <p className="whitespace-pre-wrap">
@@ -370,7 +370,7 @@ export default function ExperienceDetailPage() {
                     key={skill.id} 
                     className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm"
                   >
-                    {skill.title?.id || skill.title?.en || skill.slug}
+                    {skill.title?.id || skill.title?.en}
                   </div>
                 ))}
               </div>
