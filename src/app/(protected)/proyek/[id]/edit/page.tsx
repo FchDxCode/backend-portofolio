@@ -175,7 +175,7 @@ export default function ProyekEditPage() {
   // skill options for dropdown
   const skillOptions = skills.map((s) => ({
     value: s.id,
-    label: s.title?.[activeTab] || s.slug,
+    label: s.title?.[activeTab],
   }));
 
   if (loadingProject) {

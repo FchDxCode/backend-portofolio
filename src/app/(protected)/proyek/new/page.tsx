@@ -140,7 +140,7 @@ export default function ProyekNewPage() {
   // options untuk DropdownMultipage
   const skillOptions = skills.map((s) => ({
     value: s.id,
-    label: s.title?.id || s.title?.en || s.slug,
+    label: s.title?.id || s.title?.en,
   }));
 
     return (
