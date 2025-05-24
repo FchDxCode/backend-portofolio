@@ -133,17 +133,13 @@ export class SkillService {
     try {
       const update: any = { ...skill, updated_at: new Date().toISOString() };
 
-      if (skill.title?.en && !skill.slug) {
+      if (skill.title?.en) {
         const old = await this.getById(id);
         if (old?.title?.en !== skill.title.en) {
           update.slug = this.generateSlug(skill.title.en);
           const dup = await this.getBySlug(update.slug);
           if (dup && dup.id !== id) throw new Error('Generated slug already exists');
         }
-      }
-      if (skill.slug && skill.slug !== (await this.getById(id))?.slug) {
-        const dup = await this.getBySlug(skill.slug);
-        if (dup && dup.id !== id) throw new Error('Slug already exists');
       }
 
       if (update.percent_skills !== undefined && (update.percent_skills < 0 || update.percent_skills > 100))
