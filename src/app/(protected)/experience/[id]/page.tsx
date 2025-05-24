@@ -370,7 +370,7 @@ export default function ExperienceDetailPage() {
                     key={skill.id} 
                     className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm"
                   >
-                    {skill.title?.id || skill.title?.en || skill.slug}
+                    {skill.title?.id || skill.title?.en}
                   </div>
                 ))}
               </div>
