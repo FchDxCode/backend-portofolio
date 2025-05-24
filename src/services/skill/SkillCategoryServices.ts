@@ -93,17 +93,13 @@ export class SkillCategoryService {
     try {
       const update: any = { ...cat, updated_at: new Date().toISOString() };
 
-      if (cat.title?.en && !cat.slug) {
+      if (cat.title?.en) {
         const old = await this.getById(id);
         if (old?.title?.en !== cat.title.en) {
           update.slug = this.generateSlug(cat.title.en);
           const dup = await this.getBySlug(update.slug);
           if (dup && dup.id !== id) throw new Error('Generated slug already exists');
         }
-      }
-      if (cat.slug) {
-        const dup = await this.getBySlug(cat.slug);
-        if (dup && dup.id !== id) throw new Error('Slug already exists');
       }
 
       if (newIcon) {
