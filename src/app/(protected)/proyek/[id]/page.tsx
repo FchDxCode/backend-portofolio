@@ -150,7 +150,7 @@ export default function ProyekDetailPage() {
                     key={skill.id} 
                     className="bg-muted px-3 py-1 rounded-full text-sm"
                   >
-                    {skill.title?.[activeTab] || skill.title?.id || skill.slug}
+                    {skill.title?.[activeTab] || skill.title?.id}
                   </span>
                 ))}
               </div>
