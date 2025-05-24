@@ -197,7 +197,7 @@ export default function CertificateDetailPage() {
                 </DetailItem>
               </div>
               
-              <div>
+        <div>
                 <DetailItem 
                   label="Tanggal Terbit" 
                   icon={<Calendar size={16} />}

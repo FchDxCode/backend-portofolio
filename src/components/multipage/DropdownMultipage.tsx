@@ -9,7 +9,7 @@ interface DropdownOption {
 
 interface DropdownMultipageProps {
   options: DropdownOption[];
-  value: string | number | Array<string | number>;
+  value: string | number | Array<string | number> | undefined | null; // Allow undefined/null for value
   onChange: (value: string | number | Array<string | number>) => void;
   label: string;
   placeholder?: string;
@@ -32,15 +32,18 @@ export function DropdownMultipage({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // Logic untuk selectedValues tetap, karena sudah cukup baik menangani array untuk multiple
+  // dan single value untuk non-multiple.
+  // Untuk kasus !isMultiple, value yang dipakai di <select> akan dihandle khusus.
   const selectedValues = isMultiple
     ? Array.isArray(value)
       ? value
-      : value
+      : value != null // Check for non-null/undefined before wrapping in array
       ? [value]
       : []
-    : Array.isArray(value)
-    ? value[0] ?? ""
-    : value;
+    : Array.isArray(value) // Jika !isMultiple dan value adalah array
+    ? value[0] // Ambil elemen pertama (meskipun idealnya value bukan array jika !isMultiple)
+    : value; // Ambil value apa adanya
 
   useEffect(() => {
     const close = (e: MouseEvent) => {
@@ -57,29 +60,37 @@ export function DropdownMultipage({
     const rect = menuRef.current.getBoundingClientRect();
     const overflowBottom = rect.bottom - window.innerHeight;
     if (overflowBottom > 0) {
-      menuRef.current.style.top = `-${overflowBottom + 8}px`;
+      // Adjust based on how your layout behaves, this is a simple top adjustment
+      menuRef.current.style.transform = `translateY(-${overflowBottom + 8}px)`;
+    } else {
+      menuRef.current.style.transform = 'translateY(0px)';
     }
-  }, [isOpen]);
+  }, [isOpen, options]); // Re-check on options change too, as height might change
 
   const handleSingle = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value;
-    const parsed = !isNaN(Number(val)) && val !== "" ? Number(val) : val;
+    // Parsing ini penting: jika val adalah representasi string dari angka, ubah jadi number.
+    // Jika tidak, biarkan sebagai string. Ini memungkinkan value number untuk tahun.
+    const parsed = val === "" ? "" : !isNaN(Number(val)) ? Number(val) : val;
     onChange(parsed);
   };
 
   const toggleMulti = (optValue: string | number) => {
-    const parsed =
-      !isNaN(Number(optValue.toString())) ? Number(optValue) : optValue;
+    // Parsing juga penting di sini jika optValue dari options adalah number
+    const parsedOptValue = typeof optValue === 'string' && !isNaN(Number(optValue)) 
+        ? Number(optValue) 
+        : optValue;
 
     if (!Array.isArray(selectedValues)) {
-      onChange([parsed]);
-      return;
+        // Jika sebelumnya bukan array (misal, null atau undefined), mulai array baru
+        onChange([parsedOptValue]);
+        return;
     }
 
-    if (selectedValues.includes(parsed)) {
-      onChange(selectedValues.filter((v) => v !== parsed));
+    if (selectedValues.includes(parsedOptValue)) {
+      onChange(selectedValues.filter((v) => v !== parsedOptValue));
     } else {
-      onChange([...selectedValues, parsed]);
+      onChange([...selectedValues, parsedOptValue]);
     }
   };
 
@@ -94,6 +105,8 @@ export function DropdownMultipage({
   };
 
   if (!isMultiple) {
+    // Penyesuaian untuk value <select> agar selalu string
+    const currentSingleSelectValue = selectedValues === undefined || selectedValues === null ? "" : selectedValues.toString();
     return (
       <div className={`mb-4 ${className}`}>
         <label className="block text-sm font-medium mb-2">
@@ -102,7 +115,7 @@ export function DropdownMultipage({
         </label>
 
         <select
-          value={selectedValues.toString()}
+          value={currentSingleSelectValue} // Menggunakan value yang sudah pasti string
           onChange={handleSingle}
           required={required}
           className="w-full rounded-md border border-input bg-background p-3 text-sm focus:border-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-all"
@@ -118,6 +131,7 @@ export function DropdownMultipage({
     );
   }
 
+  // Bagian isMultiple tetap sama, sudah cukup robust.
   return (
     <div className={`mb-4 ${className} relative`} ref={wrapperRef}>
       <label className="block text-sm font-medium mb-2">
@@ -125,7 +139,6 @@ export function DropdownMultipage({
         {required && <span className="text-destructive">*</span>}
       </label>
 
-      {/* trigger */}
       <button
         type="button"
         onClick={() => setIsOpen((p) => !p)}
@@ -182,7 +195,6 @@ export function DropdownMultipage({
                       active ? "bg-secondary/60" : ""
                     }`}
                 >
-                  {/* checkbox */}
                   <span
                     className={`shrink-0 w-4 h-4 rounded border flex items-center justify-center 
                       ${active ? "bg-primary border-primary" : "border-input"}`}
@@ -219,13 +231,12 @@ export function DropdownMultipage({
         </div>
       )}
 
-      {required && (
+      {required && Array.isArray(selectedValues) && ( // Hidden input for validation only if multiple and required
         <input
           type="hidden"
-          required={Array.isArray(selectedValues) && selectedValues.length === 0}
-          value={
-            Array.isArray(selectedValues) ? selectedValues.join(",") : ""
-          }
+          required={selectedValues.length === 0}
+          value={selectedValues.join(",")}
+          style={{ display: 'none' }} // ensure it's not visible
         />
       )}
     </div>

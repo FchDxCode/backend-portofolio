@@ -143,7 +143,7 @@ export default function ProyekNewPage() {
     label: s.title?.id || s.title?.en || s.slug,
   }));
 
-  return (
+    return (
     <div className="space-y-6">
       <PageHeader
         title="Tambah Proyek Baru"

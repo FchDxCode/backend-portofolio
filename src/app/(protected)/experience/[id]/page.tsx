@@ -301,7 +301,7 @@ export default function ExperienceDetailPage() {
                 </DetailItem>
               </div>
               
-              <div>
+        <div>
                 <DetailItem label="Pencapaian Utama (English)">
                   <div className="prose prose-sm max-w-none">
                     <p className="whitespace-pre-wrap">

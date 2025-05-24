@@ -11,7 +11,7 @@ export interface WebSetting {
   updated_at?: string;
 }
 
-export interface SocialMedia {
+  export interface SocialMedia {
     id: number;
     title?: Record<string, any>;
     icon?: string;
